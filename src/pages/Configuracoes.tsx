@@ -6,9 +6,11 @@ import { Plus, Trash2, Edit3, RefreshCw, Cpu } from 'lucide-react';
 const Configuracoes = () => {
   const settings = useStore((s) => s.settings);
   const rooms = useStore((s) => s.rooms);
+  const bracelets = useStore((s) => s.bracelets);
   const updateSettings = useStore((s) => s.updateSettings);
   const addRoom = useStore((s) => s.addRoom);
   const removeRoom = useStore((s) => s.removeRoom);
+  const updateBracelet = useStore((s) => s.updateBracelet);
 
   const [churchName, setChurchName] = useState(settings.churchName);
   const [reactivateMinutes, setReactivateMinutes] = useState(settings.reactivateMinutes);

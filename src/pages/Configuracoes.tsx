@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit3, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit3, RefreshCw, Cpu } from 'lucide-react';
 
 const Configuracoes = () => {
   const settings = useStore((s) => s.settings);

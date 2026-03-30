@@ -8,6 +8,7 @@ export interface Child {
   braceletNumber: string | null;
   status: 'present' | 'called' | 'left';
   checkedInAt: string;
+  authorizedPickup: string | null;
 }
 
 export interface Guardian {
@@ -23,6 +24,7 @@ export interface Bracelet {
   battery: number;
   guardianName: string | null;
   childId: string | null;
+  espId: string | null;
 }
 
 export interface Call {
@@ -34,6 +36,8 @@ export interface Call {
   status: 'open' | 'answered' | 'reactivated';
   createdAt: string;
   answeredAt: string | null;
+  roomId: string;
+  answeredBy: 'reception' | 'tia' | null;
 }
 
 export interface Room {

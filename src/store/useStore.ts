@@ -52,9 +52,14 @@ export const useStore = create<AppState>()(
         children: s.children.map((c) => c.id === id ? { ...c, ...updates } : c),
       })),
       addCall: (call) => set((s) => ({ calls: [...s.calls, call] })),
-      answerCall: (callId) => set((s) => ({
-        calls: s.calls.map((c) => c.id === callId ? { ...c, status: 'answered', answeredAt: new Date().toISOString() } : c),
-      })),
+      answerCall: (callId) => set((s) => {
+        const call = s.calls.find((c) => c.id === callId);
+        return {
+          calls: s.calls.map((c) => c.id === callId ? { ...c, status: 'answered' as const, answeredAt: new Date().toISOString() } : c),
+          children: call ? s.children.map((ch) => ch.id === call.childId ? { ...ch, status: 'present' as const } : ch) : s.children,
+          bracelets: call ? s.bracelets.map((b) => b.number === call.braceletNumber ? { ...b, status: 'available' as const, guardianName: null, childId: null } : b) : s.bracelets,
+        };
+      }),
       reactivateCall: (callId) => set((s) => ({
         calls: s.calls.map((c) => c.id === callId ? { ...c, status: 'open', createdAt: new Date().toISOString(), answeredAt: null } : c),
       })),

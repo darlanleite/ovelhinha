@@ -1,0 +1,230 @@
+import { useState, useEffect } from 'react';
+import { useStore } from '@/store/useStore';
+import { toast } from 'sonner';
+import { Search, Camera } from 'lucide-react';
+
+const reasons = [
+  { icon: '🚽', label: 'Banheiro' },
+  { icon: '🤒', label: 'Passando mal' },
+  { icon: '😢', label: 'Chorando' },
+  { icon: '⚠️', label: 'Urgência' },
+  { icon: '🍼', label: 'Amamentação' },
+  { icon: '📝', label: 'Outro' },
+];
+
+const Acionar = () => {
+  const children = useStore((s) => s.children);
+  const rooms = useStore((s) => s.rooms);
+  const calls = useStore((s) => s.calls);
+  const addCall = useStore((s) => s.addCall);
+  const answerCall = useStore((s) => s.answerCall);
+  const reactivateCall = useStore((s) => s.reactivateCall);
+  const updateChild = useStore((s) => s.updateChild);
+
+  const [query, setQuery] = useState('');
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [selectedReason, setSelectedReason] = useState<number | null>(null);
+  const [calling, setCalling] = useState(false);
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+
+  const filtered = query.trim()
+    ? children.filter((c) => c.status !== 'left' && (c.name.toLowerCase().includes(query.toLowerCase()) || (c.braceletNumber && c.braceletNumber.includes(query))))
+    : [];
+
+  const child = children.find((c) => c.id === selectedChild);
+  const room = child ? rooms.find((r) => r.id === child.roomId) : null;
+  const activeCall = activeCallId ? calls.find((c) => c.id === activeCallId) : null;
+
+  const handleCall = () => {
+    if (!child || selectedReason === null) return;
+    setCalling(true);
+    setTimeout(() => {
+      const callId = 'call' + Date.now();
+      addCall({
+        id: callId,
+        childId: child.id,
+        braceletNumber: child.braceletNumber || '??',
+        reason: reasons[selectedReason].label,
+        reasonIcon: reasons[selectedReason].icon,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+        answeredAt: null,
+      });
+      updateChild(child.id, { status: 'called' });
+      setCalling(false);
+      setActiveCallId(callId);
+      toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
+    }, 1500);
+  };
+
+  const handleAnswered = () => {
+    if (activeCallId && child) {
+      answerCall(activeCallId);
+      updateChild(child.id, { status: 'present' });
+      toast('Pai chegou! ✓ 🐑');
+      setActiveCallId(null);
+      setSelectedChild(null);
+      setSelectedReason(null);
+    }
+  };
+
+  const handleReactivate = () => {
+    if (activeCallId) {
+      reactivateCall(activeCallId);
+      toast('Pulseira reacionada! 🐑');
+    }
+  };
+
+  if (calling) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 animate-fade-in">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse-urgent mb-6">
+          <span className="text-3xl">📡</span>
+        </div>
+        <p className="font-heading font-extrabold text-xl text-foreground">Acionando pulseira #{child?.braceletNumber}...</p>
+        <p className="text-muted-foreground mt-2">Enviando sinal</p>
+      </div>
+    );
+  }
+
+  if (activeCall && activeCall.status === 'open') {
+    return <WaitingScreen call={activeCall} childName={child?.name || ''} onAnswered={handleAnswered} onReactivate={handleReactivate} />;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="font-heading font-black text-2xl text-foreground mb-6">Acionar Pai</h1>
+
+      {/* Search */}
+      <div className="flex gap-2 mb-6">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setSelectedChild(null); }}
+            placeholder="Nome ou número da criança..."
+            className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+          />
+        </div>
+        <button className="w-12 h-12 rounded-lg border border-border bg-card flex items-center justify-center hover:bg-muted transition-colors" onClick={() => toast('📷 Scanner de QR Code (simulado)')}>
+          <Camera className="w-5 h-5 text-muted-foreground" />
+        </button>
+      </div>
+
+      {/* Results */}
+      {!selectedChild && filtered.length > 0 && (
+        <div className="space-y-2 mb-6 animate-fade-in">
+          {filtered.map((c) => {
+            const r = rooms.find((r) => r.id === c.roomId);
+            return (
+              <button key={c.id} onClick={() => setSelectedChild(c.id)} className="w-full bg-card rounded-card shadow-soft border border-border p-4 flex items-center gap-4 hover:shadow-medium transition-shadow text-left">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-heading font-bold text-primary text-sm">
+                  {c.name.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <p className="font-heading font-bold text-foreground">{c.name}</p>
+                  <p className="text-sm text-muted-foreground">{r?.emoji} {r?.name}</p>
+                </div>
+                {c.braceletNumber && (
+                  <span className="bg-secondary/20 font-mono font-bold text-sm px-2 py-1 rounded-md text-foreground">#{c.braceletNumber}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Selected child */}
+      {child && (
+        <div className="animate-fade-in space-y-6">
+          <div className="bg-card rounded-card shadow-soft border border-border p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center font-heading font-black text-primary text-xl">
+                {child.name.charAt(0)}
+              </div>
+              <div>
+                <h2 className="font-heading font-black text-xl text-foreground">{child.name}</h2>
+                <p className="text-muted-foreground text-sm">{room?.emoji} {room?.name} · {child.guardians[0]?.name}</p>
+              </div>
+              {child.braceletNumber && (
+                <span className="ml-auto bg-secondary/20 font-mono font-bold text-lg px-3 py-1.5 rounded-xl text-foreground">#{child.braceletNumber}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Reason selector */}
+          <div>
+            <h3 className="font-heading font-bold text-foreground mb-3">Motivo da chamada</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {reasons.map((r, i) => (
+                <button
+                  key={r.label}
+                  onClick={() => setSelectedReason(i)}
+                  className={`p-4 rounded-card border text-center transition-all ${
+                    selectedReason === i
+                      ? 'border-primary bg-primary/5 shadow-soft'
+                      : 'border-border bg-card hover:bg-muted/30'
+                  }`}
+                >
+                  <span className="text-2xl block mb-1">{r.icon}</span>
+                  <span className="text-sm font-medium text-foreground">{r.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleCall}
+            disabled={selectedReason === null}
+            className="w-full bg-urgent text-urgent-foreground font-heading font-extrabold text-lg py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            CHAMAR PAI
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WaitingScreen = ({ call, childName, onAnswered, onReactivate }: { call: any; childName: string; onAnswered: () => void; onReactivate: () => void }) => {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = new Date(call.createdAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [call.createdAt]);
+
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const progress = Math.min((elapsed / 300) * 100, 100);
+
+  return (
+    <div className="max-w-lg mx-auto text-center py-16 animate-fade-in">
+      <div className="text-5xl mb-4 animate-pulse-urgent">{call.reasonIcon}</div>
+      <h2 className="font-heading font-black text-2xl text-foreground mb-1">Aguardando pai...</h2>
+      <p className="text-muted-foreground mb-6">{childName} · {call.reason}</p>
+
+      <div className="font-mono text-5xl font-bold text-foreground mb-4">
+        {mins}:{secs.toString().padStart(2, '0')}
+      </div>
+
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-8">
+        <div className="h-full bg-urgent rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="flex gap-3 justify-center">
+        <button onClick={onAnswered} className="bg-success text-success-foreground font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">
+          ✓ Pai Chegou
+        </button>
+        <button onClick={onReactivate} className="bg-secondary text-secondary-foreground font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">
+          🔁 Reacionar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Acionar;

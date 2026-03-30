@@ -45,7 +45,7 @@ const Login = () => {
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-3">
-            <OvelhinhaLogo size={56} />
+            <OvelhinhaLogo size={96} />
           </div>
           <p className="mt-2 text-muted-foreground font-body text-sm font-medium">Cada criança, no lugar certo.</p>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Smartphone } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
@@ -55,7 +55,7 @@ const Login = () => {
           <p className="mt-2 text-muted-foreground font-body text-sm font-medium">Cada criança, no lugar certo.</p>
         </div>
 
-        {/* Role selection — apenas desktop */}
+        {/* Role selection — apenas desktop, somente Recepção */}
         {!isMobile && !role && (
           <div className="space-y-4">
             <button
@@ -68,18 +68,6 @@ const Login = () => {
               <div className="text-left">
                 <p className="font-heading font-extrabold text-lg text-foreground">Recepção</p>
                 <p className="text-sm text-muted-foreground">Painel completo do sistema</p>
-              </div>
-            </button>
-            <button
-              onClick={() => setRole('tia')}
-              className="w-full bg-card rounded-card shadow-soft p-6 flex items-center gap-4 hover:shadow-medium transition-shadow border border-border"
-            >
-              <div className="w-14 h-14 rounded-xl bg-secondary/20 flex items-center justify-center">
-                <Smartphone className="w-7 h-7 text-secondary" />
-              </div>
-              <div className="text-left">
-                <p className="font-heading font-extrabold text-lg text-foreground">Salinha</p>
-                <p className="text-sm text-muted-foreground">App mobile para a sala</p>
               </div>
             </button>
           </div>

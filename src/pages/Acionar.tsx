@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { braceletOfflineSince, braceletIsRisky } from '@/store/types';
 import { toast } from 'sonner';
 import { Search, Camera } from 'lucide-react';
 
@@ -16,9 +17,11 @@ const Acionar = () => {
   const children = useStore((s) => s.children);
   const rooms = useStore((s) => s.rooms);
   const calls = useStore((s) => s.calls);
+  const bracelets = useStore((s) => s.bracelets);
   const addCall = useStore((s) => s.addCall);
   const answerCall = useStore((s) => s.answerCall);
   const reactivateCall = useStore((s) => s.reactivateCall);
+  const triggerFallback = useStore((s) => s.triggerFallback);
   const updateChild = useStore((s) => s.updateChild);
 
   const [query, setQuery] = useState('');
@@ -34,6 +37,15 @@ const Acionar = () => {
   const child = children.find((c) => c.id === selectedChild);
   const room = child ? rooms.find((r) => r.id === child.roomId) : null;
   const activeCall = activeCallId ? calls.find((c) => c.id === activeCallId) : null;
+
+  const bracelet = child?.braceletNumber
+    ? bracelets.find((b) => b.number === child.braceletNumber)
+    : null;
+
+  const isUnreachable = bracelet?.connectivityStatus === 'unreachable';
+  const isWarning     = bracelet?.connectivityStatus === 'warning';
+  const isBatteryLow  = bracelet && bracelet.battery < 15;
+  const offlineSecs   = bracelet ? braceletOfflineSince(bracelet) : null;
 
   const handleCall = () => {
     if (!child || selectedReason === null) return;
@@ -61,7 +73,7 @@ const Acionar = () => {
 
   const handleAnswered = () => {
     if (activeCallId && child) {
-      answerCall(activeCallId);
+      answerCall(activeCallId, 'reception');
       updateChild(child.id, { status: 'present' });
       toast('Pai chegou! ✓ 🐑');
       setActiveCallId(null);
@@ -77,6 +89,17 @@ const Acionar = () => {
     }
   };
 
+  const handleFallback = (channel: 'whatsapp' | 'microphone' | 'volunteer') => {
+    if (!activeCallId) return;
+    triggerFallback(activeCallId, {
+      channel,
+      attemptedAt: new Date().toISOString(),
+      attemptedBy: 'reception',
+    });
+    const labels = { whatsapp: 'WhatsApp enviado 🐑', microphone: 'Anúncio registrado 🐑', volunteer: 'Voluntário acionado 🐑' };
+    toast(labels[channel]);
+  };
+
   if (calling) {
     return (
       <div className="flex flex-col items-center justify-center py-32 animate-fade-in">
@@ -89,8 +112,16 @@ const Acionar = () => {
     );
   }
 
-  if (activeCall && activeCall.status === 'open') {
-    return <WaitingScreen call={activeCall} childName={child?.name || ''} onAnswered={handleAnswered} onReactivate={handleReactivate} />;
+  if (activeCall && (activeCall.status === 'open' || activeCall.status === 'reactivated')) {
+    return (
+      <WaitingScreen
+        call={activeCall}
+        childName={child?.name || ''}
+        onAnswered={handleAnswered}
+        onReactivate={handleReactivate}
+        onFallback={handleFallback}
+      />
+    );
   }
 
   return (
@@ -154,6 +185,49 @@ const Acionar = () => {
             </div>
           </div>
 
+          {/* Connectivity warnings */}
+          {isUnreachable && (
+            <div className="bg-urgent/5 border border-urgent/30 rounded-card p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">📡</span>
+                <div>
+                  <p className="font-heading font-bold text-urgent text-sm">
+                    Pulseira #{child.braceletNumber} sem sinal
+                    {offlineSecs !== null ? ` há ${offlineSecs}s` : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pai pode não receber o alerta. Use uma alternativa:</p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => handleFallback('whatsapp')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors">
+                  📱 Enviar WhatsApp
+                </button>
+                <button onClick={() => handleFallback('microphone')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
+                  🎙️ Anunciar no microfone
+                </button>
+                <button onClick={() => handleFallback('volunteer')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-secondary/10 text-foreground border border-secondary/20 hover:bg-secondary/20 transition-colors">
+                  🙋 Acionar voluntário
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isWarning && !isUnreachable && (
+            <div className="bg-secondary/10 border border-secondary/30 rounded-card px-4 py-3 flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <p className="text-sm font-medium text-foreground">Pulseira com sinal fraco — monitorando</p>
+            </div>
+          )}
+
+          {isBatteryLow && (
+            <div className="bg-secondary/10 border border-secondary/30 rounded-card px-4 py-3 flex items-center gap-2">
+              <span className="text-base">🔋</span>
+              <p className="text-sm font-medium text-foreground">
+                Bateria crítica ({bracelet?.battery}%) — considere trocar antes de acionar
+              </p>
+            </div>
+          )}
+
           {/* Reason selector */}
           <div>
             <h3 className="font-heading font-bold text-foreground mb-3">Motivo da chamada</h3>
@@ -178,9 +252,13 @@ const Acionar = () => {
           <button
             onClick={handleCall}
             disabled={selectedReason === null}
-            className="w-full bg-urgent text-urgent-foreground font-heading font-extrabold text-lg py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`w-full font-heading font-extrabold text-lg py-4 rounded-lg transition-opacity disabled:opacity-40 disabled:cursor-not-allowed ${
+              isUnreachable
+                ? 'bg-muted text-muted-foreground border border-border hover:opacity-80'
+                : 'bg-urgent text-urgent-foreground hover:opacity-90'
+            }`}
           >
-            CHAMAR PAI
+            {isUnreachable ? 'Tentar mesmo assim' : 'CHAMAR PAI'}
           </button>
         </div>
       )}
@@ -188,7 +266,19 @@ const Acionar = () => {
   );
 };
 
-const WaitingScreen = ({ call, childName, onAnswered, onReactivate }: { call: any; childName: string; onAnswered: () => void; onReactivate: () => void }) => {
+const WaitingScreen = ({
+  call,
+  childName,
+  onAnswered,
+  onReactivate,
+  onFallback,
+}: {
+  call: any;
+  childName: string;
+  onAnswered: () => void;
+  onReactivate: () => void;
+  onFallback: (channel: 'whatsapp' | 'microphone' | 'volunteer') => void;
+}) => {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -217,7 +307,15 @@ const WaitingScreen = ({ call, childName, onAnswered, onReactivate }: { call: an
         <div className="h-full bg-urgent rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
       </div>
 
-      <div className="flex gap-3 justify-center">
+      {call.fallbackTriggered && (
+        <div className="mb-6 bg-muted rounded-card px-4 py-3 text-sm text-muted-foreground text-left">
+          {call.fallbackAttempts.map((a: any, i: number) => (
+            <p key={i}>• {a.channel === 'whatsapp' ? '📱 WhatsApp enviado' : a.channel === 'microphone' ? '🎙️ Anúncio no microfone' : '🙋 Voluntário acionado'}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-3 justify-center flex-wrap">
         <button onClick={onAnswered} className="bg-success text-success-foreground font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">
           ✓ Pai Chegou
         </button>

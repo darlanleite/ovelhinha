@@ -1,16 +1,58 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { braceletOfflineSince } from '@/store/types';
 import { toast } from 'sonner';
 import { Plus, Battery, Wifi, WifiOff } from 'lucide-react';
 
 const statusConfig = {
   'available': { label: 'Disponível', dot: 'bg-success', bg: 'bg-success/10' },
-  'in-use': { label: 'Em uso', dot: 'bg-secondary', bg: 'bg-secondary/10' },
-  'charging': { label: 'Carregando', dot: 'bg-primary', bg: 'bg-primary/10' },
-  'offline': { label: 'Offline', dot: 'bg-muted-foreground', bg: 'bg-muted' },
+  'in-use':    { label: 'Em uso',      dot: 'bg-secondary', bg: 'bg-secondary/10' },
+  'charging':  { label: 'Carregando', dot: 'bg-primary', bg: 'bg-primary/10' },
+  'offline':   { label: 'Offline',    dot: 'bg-muted-foreground', bg: 'bg-muted' },
 };
 
 const filters = ['Todas', 'Disponíveis', 'Em uso', 'Bateria baixa'] as const;
+
+const ConnectivityBadge = ({ bracelet }: { bracelet: ReturnType<typeof useStore.getState>['bracelets'][number] }) => {
+  if (bracelet.status !== 'in-use') return null;
+
+  const secs = braceletOfflineSince(bracelet);
+  const sinceLabel = secs !== null ? `${secs}s atrás` : 'nunca';
+
+  if (bracelet.connectivityStatus === 'unreachable') {
+    return (
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-urgent/10 text-urgent animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-urgent animate-ping" />
+          sem sinal
+        </span>
+        <span className="text-xs text-muted-foreground">{sinceLabel}</span>
+      </div>
+    );
+  }
+
+  if (bracelet.connectivityStatus === 'warning') {
+    return (
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-secondary/20 text-secondary-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+          atenção
+        </span>
+        <span className="text-xs text-muted-foreground">{sinceLabel}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-1.5">
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success">
+        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+        online
+      </span>
+      <span className="text-xs text-muted-foreground">{sinceLabel}</span>
+    </div>
+  );
+};
 
 const Pulseiras = () => {
   const bracelets = useStore((s) => s.bracelets);
@@ -34,6 +76,9 @@ const Pulseiras = () => {
       guardianName: null,
       childId: null,
       espId: null,
+      lastHeartbeat: null,
+      connectivityStatus: 'online',
+      lastGatewayId: null,
     });
     toast(`Pulseira #${nextNum} registrada! 🐑`);
   };
@@ -78,15 +123,19 @@ const Pulseiras = () => {
               </div>
               {/* Battery */}
               <div className="flex items-center gap-2 mb-2">
-                <Battery className={`w-4 h-4 ${b.battery < 20 ? 'text-urgent' : 'text-muted-foreground'}`} />
+                <Battery className={`w-4 h-4 ${b.battery < 15 ? 'text-urgent' : b.battery < 20 ? 'text-secondary' : 'text-muted-foreground'}`} />
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${b.battery < 20 ? 'bg-urgent' : b.battery < 50 ? 'bg-secondary' : 'bg-success'}`} style={{ width: `${b.battery}%` }} />
+                  <div className={`h-full rounded-full ${b.battery < 15 ? 'bg-urgent' : b.battery < 50 ? 'bg-secondary' : 'bg-success'}`} style={{ width: `${b.battery}%` }} />
                 </div>
                 <span className="text-xs text-muted-foreground font-mono">{b.battery}%</span>
               </div>
+              {b.battery < 15 && (
+                <p className="text-xs text-urgent font-medium mt-1">⚠ Bateria crítica</p>
+              )}
               {b.guardianName && (
                 <p className="text-xs text-muted-foreground mt-2 truncate">{b.guardianName}</p>
               )}
+              <ConnectivityBadge bracelet={b} />
             </div>
           );
         })}

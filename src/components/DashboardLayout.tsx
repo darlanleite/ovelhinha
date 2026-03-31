@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, UserPlus, Watch, BarChart3, Settings, LogOut, Bell } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
+import { useHeartbeatSimulator } from '@/hooks/useHeartbeatSimulator';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: Home },
@@ -20,6 +21,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const settings = useStore((s) => s.settings);
   const calls = useStore((s) => s.calls);
   const openCalls = calls.filter((c) => c.status === 'open').length;
+
+  useHeartbeatSimulator();
 
   const handleLogout = () => {
     logout();

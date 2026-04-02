@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Search, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { callEsp32 } from '@/lib/esp32';
+import { acionarPulseira } from '@/lib/esp32';
 
 const reasons = [
   { icon: '🚽', label: 'Banheiro' },
@@ -20,8 +20,6 @@ const TiaDaSala = () => {
   const addCall = useStore((s) => s.addCall);
   const updateChild = useStore((s) => s.updateChild);
   const calls = useStore((s) => s.calls);
-  const esp32Url = useStore((s) => s.settings.esp32Url);
-
   const room = rooms.find((r) => r.id === tiaRoom);
   const roomChildren = children.filter((c) => c.roomId === tiaRoom && c.status !== 'left');
 
@@ -67,7 +65,7 @@ const TiaDaSala = () => {
     updateChild(child.id, { status: 'called' });
     setConfirmation(child.name);
     toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
-    callEsp32(esp32Url, '/on');
+    acionarPulseira(child.braceletNumber || '??', reasons[reasonIdx].label);
     setTimeout(() => setConfirmation(null), 3000);
   };
 

@@ -49,7 +49,7 @@ export function useCalls() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('calls-realtime')
+      .channel(`calls-${CHURCH_ID}-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calls', filter: `church_id=eq.${CHURCH_ID}` },
         () => queryClient.invalidateQueries({ queryKey: ['calls', CHURCH_ID] }))
       .subscribe()

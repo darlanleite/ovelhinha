@@ -49,7 +49,7 @@ export function useChildren() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('children-realtime')
+      .channel(`children-${CHURCH_ID}-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: `church_id=eq.${CHURCH_ID}` },
         () => queryClient.invalidateQueries({ queryKey: ['children', CHURCH_ID] }))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guardians' },

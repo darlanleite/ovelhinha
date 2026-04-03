@@ -56,7 +56,7 @@ export function useBracelets() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('bracelets-realtime')
+      .channel(`bracelets-${CHURCH_ID}-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bracelets', filter: `church_id=eq.${CHURCH_ID}` },
         () => queryClient.invalidateQueries({ queryKey: ['bracelets', CHURCH_ID] }))
       .subscribe()

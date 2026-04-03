@@ -3,6 +3,7 @@ import { Users, Watch, AlertTriangle, BatteryLow, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { emitSync } from '@/lib/syncClient';
 
 const Dashboard = () => {
   const children = useStore((s) => s.children);
@@ -21,6 +22,7 @@ const Dashboard = () => {
       const bracelet = bracelets.find((b) => b.number === child.braceletNumber);
       if (bracelet) updateBracelet(bracelet.id, { status: 'available', guardianName: null, childId: null });
     }
+    emitSync({ type: 'checkout', payload: { childId, braceletNumber: child.braceletNumber } });
     toast(`Saída de ${child.name} registrada 🐑`);
   };
 
@@ -65,7 +67,7 @@ const Dashboard = () => {
             {openCalls.map((call) => {
               const child = children.find((c) => c.id === call.childId);
               return (
-                <OpenCallCard key={call.id} call={call} childName={child?.name || ''} onAnswer={() => answerCall(call.id)} />
+                <OpenCallCard key={call.id} call={call} childName={child?.name || ''} onAnswer={() => { answerCall(call.id, 'reception'); emitSync({ type: 'answerCall', payload: { callId: call.id, answeredBy: 'reception' } }); }} />
               );
             })}
           </div>

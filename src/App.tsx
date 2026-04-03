@@ -12,6 +12,7 @@ import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
+import { SyncBridge } from "./components/SyncBridge";
 import { useStore } from "./store/useStore";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const ReceptionPage = ({ children }: { children: React.ReactNode }) => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <SyncBridge />
       <Sonner position="top-right" toastOptions={{ className: 'font-body' }} />
       <BrowserRouter>
         <Routes>

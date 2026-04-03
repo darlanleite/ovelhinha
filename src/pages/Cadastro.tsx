@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Check, ChevronRight } from 'lucide-react';
+import { emitSync } from '@/lib/syncClient';
 
 const steps = ['Criança', 'Responsável', 'Pulseira'];
 
@@ -60,11 +61,13 @@ const Cadastro = () => {
     if (showGuardian2 && guardian2Name) {
       guardians.push({ id: 'g' + (Date.now() + 1), name: guardian2Name, phone: guardian2Phone });
     }
-    addChild({
+    const newChild = {
       id, name: childName, birthDate, roomId, medicalNotes, guardians,
-      braceletNumber: padded, status: 'present', checkedInAt: new Date().toISOString(),
+      braceletNumber: padded, status: 'present' as const, checkedInAt: new Date().toISOString(),
       authorizedPickup: authorizedPickup.trim() || null,
-    });
+    };
+    addChild(newChild);
+    emitSync({ type: 'addChild', payload: newChild });
     const bracelet = bracelets.find((b) => b.number === padded);
     if (bracelet) {
       updateBracelet(bracelet.id, { status: 'in-use', guardianName: guardianName, childId: id });

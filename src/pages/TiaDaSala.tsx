@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { Search, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { acionarPulseira } from '@/lib/esp32';
+import { emitSync } from '@/lib/syncClient';
 
 const reasons = [
   { icon: '🚽', label: 'Banheiro' },
@@ -66,6 +67,9 @@ const TiaDaSala = () => {
     setConfirmation(child.name);
     toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
     acionarPulseira(child.braceletNumber || '??', reasons[reasonIdx].label);
+    const callId = 'call' + Date.now();
+    emitSync({ type: 'addCall', payload: { id: callId, childId: child.id, braceletNumber: child.braceletNumber || '??', reason: reasons[reasonIdx].label, reasonIcon: reasons[reasonIdx].icon, status: 'open', createdAt: new Date().toISOString(), answeredAt: null, roomId: child.roomId, answeredBy: null, braceletConnectivityAtCall: 'online', bleDeliveryStatus: 'pending', bleAttempts: 0, bleLastAttemptAt: null, fallbackTriggered: false, fallbackAttempts: [] } });
+    emitSync({ type: 'updateChild', payload: { id: child.id, updates: { status: 'called' } } });
     setTimeout(() => setConfirmation(null), 3000);
   };
 

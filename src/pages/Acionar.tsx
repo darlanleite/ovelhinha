@@ -4,6 +4,7 @@ import { braceletOfflineSince, braceletIsRisky } from '@/store/types';
 import { toast } from 'sonner';
 import { Search, Camera } from 'lucide-react';
 import { acionarPulseira, encerrarPulseira } from '@/lib/esp32';
+import { emitSync } from '@/lib/syncClient';
 
 const reasons = [
   { icon: '🚽', label: 'Banheiro' },
@@ -70,6 +71,7 @@ const Acionar = () => {
       setActiveCallId(callId);
       toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
       acionarPulseira(child.braceletNumber || '??', reasons[selectedReason].label).catch(() => {});
+      emitSync({ type: 'addCall', payload: { id: callId, childId: child.id, braceletNumber: child.braceletNumber || '??', reason: reasons[selectedReason].label, reasonIcon: reasons[selectedReason].icon, status: 'open', createdAt: new Date().toISOString(), answeredAt: null, roomId: child.roomId, answeredBy: null, braceletConnectivityAtCall: 'online', bleDeliveryStatus: 'pending', bleAttempts: 0, bleLastAttemptAt: null, fallbackTriggered: false, fallbackAttempts: [] } });
     }, 1500);
   };
 
@@ -79,6 +81,8 @@ const Acionar = () => {
       updateChild(child.id, { status: 'present' });
       toast('Pai chegou! ✓ 🐑');
       encerrarPulseira(child.braceletNumber || '??').catch(() => {});
+      emitSync({ type: 'answerCall', payload: { callId: activeCallId, answeredBy: 'reception' } });
+      emitSync({ type: 'updateChild', payload: { id: child.id, updates: { status: 'present' } } });
       setActiveCallId(null);
       setSelectedChild(null);
       setSelectedReason(null);

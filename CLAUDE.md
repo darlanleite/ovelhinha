@@ -17,6 +17,8 @@ a equipe aciona a pulseira do pai pelo sistema, que acende o LED. O pai vai até
 - Zustand (auth only — persist no localStorage via `useAppStore`)
 - React Query (@tanstack/react-query) — estado do servidor
 - Supabase (banco de dados + realtime)
+- `react-qr-code` — geração de QR Code na etiqueta de impressão
+- `html5-qrcode` — leitura de QR Code via câmera na TiaDaSala
 - React Router DOM
 - Recharts (gráficos)
 - Sonner (toast notifications)
@@ -28,7 +30,10 @@ a equipe aciona a pulseira do pai pelo sistema, que acende o LED. O pai vai até
 ```
 src/
   pages/          → telas do sistema
-  components/     → componentes reutilizáveis
+  components/
+    OvelhinhaLogo.tsx   → logo SVG
+    DashboardLayout.tsx → sidebar + header
+    PrintableLabel.tsx  → etiqueta de impressão (print:flex, hidden em tela)
   store/
     useAppStore.ts  → auth apenas (role + tiaRoom), persiste localStorage
     useStore.ts     → store legado (não usado nas páginas novas)
@@ -194,6 +199,7 @@ AppSettings { churchName, reactivateMinutes, dailyCode }
 - `children` — lista todas as crianças do culto atual com guardians
 - `addChild(child, guardians)` — insere criança + guardians + atualiza bracelet
 - `updateChild(id, updates)` — atualiza status, braceletNumber etc.
+- `checkInChild(id, braceletNumber, roomId)` — reativa criança existente (status→present, vincula pulseira)
 
 ### useCalls
 - `calls`, `openCalls` — chamadas do culto
@@ -212,6 +218,7 @@ AppSettings { churchName, reactivateMinutes, dailyCode }
 - `rooms` — salas da igreja
 - `updateSettings` — atualiza tabelas corretas separadamente
 - `generateDailyCode()`, `addRoom()`, `removeRoom()`, `novoCulto()`
+- `novoCulto()` — **não deleta crianças**. Marca todas como `left`, limpa bracelet_number, libera pulseiras, apaga chamadas, salva service_history. Cadastros são preservados para check-in recorrente.
 
 ### useReports
 - `history` — histórico de cultos (campo `service_date` no DB, mapeado para `date` no tipo)
@@ -326,7 +333,7 @@ Atualizar `VITE_BACKEND_URL` no `.env` com a URL do ngrok.
 
 ## Status do Projeto
 
-### ✅ Concluído
+### ✅ Concluído — Fase 1
 - Interface web completa (todas as 8 telas)
 - Migração completa para Supabase (banco + realtime)
 - Auth com Zustand (`useAppStore`) — role + tiaRoom
@@ -338,11 +345,17 @@ Atualizar `VITE_BACKEND_URL` no `.env` com a URL do ngrok.
 - Deploy automático no Vercel via GitHub (ovelhinha-olive.vercel.app)
 - Fluxo completo testado: cadastro → acionar → LED acende → pai chegou → LED apaga
 
+### ✅ Concluído — Fase 2
+- **Cadastro recorrente:** `novoCulto` preserva crianças (status→left), `checkInChild` reativa no próximo culto
+- **Cadastro.tsx refatorado:** modo `new | existing` — busca dinâmica no Supabase, crianças já no culto aparecem com tag "NO CULTO" e bloqueadas, QR Code real com `react-qr-code`
+- **Impressão de etiqueta:** `PrintableLabel.tsx` com nome, sala, número da pulseira e QR Code — usa `window.print()` + classes Tailwind `print:flex` / `print:hidden`
+- **Scanner QR Code na TiaDaSala:** `html5-qrcode` lê UUID do QR Code e abre automaticamente o painel de motivos da criança correspondente
+- **Desvincular pulseira em Pulseiras.tsx:** botão "Desvincular" em pulseiras `in-use` chama `updateChild` (status→left) e libera a bracelet
+
 ### ⏳ Próximos passos
-- Impressão de etiqueta com QR Code
-- Scanner de QR Code na TiaDaSala
 - Check-out por pulseira (criança só sai com par correto)
-- Cadastro recorrente (check-in em 1 clique para crianças já conhecidas)
+- Reacionamento automático após X minutos
+- Notificação por WhatsApp
 
 ---
 

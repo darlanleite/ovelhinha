@@ -108,5 +108,24 @@ export function useChildren() {
     if (error) throw error
   }
 
-  return { children, loading, addChild, updateChild }
+  async function checkInChild(id: string, braceletNumber: string, roomId: string) {
+    const dbUpdates = {
+      status: 'present',
+      checked_in_at: new Date().toISOString(),
+      bracelet_number: braceletNumber,
+      room_id: roomId
+    }
+    const { error } = await supabase.from('children').update(dbUpdates).eq('id', id)
+    if (error) throw error
+
+    // Atualiza a pulseira
+    const { data: guardianData } = await supabase.from('guardians').select('name').eq('child_id', id).limit(1)
+    await supabase
+      .from('bracelets')
+      .update({ status: 'in-use', guardian_name: guardianData?.[0]?.name || null, child_id: id })
+      .eq('church_id', CHURCH_ID)
+      .eq('number', braceletNumber)
+  }
+
+  return { children, loading, addChild, updateChild, checkInChild }
 }

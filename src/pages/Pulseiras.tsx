@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useBracelets } from '@/hooks/useBracelets';
+import { useChildren } from '@/hooks/useChildren';
 import { braceletOfflineSince } from '@/store/types';
 import type { Bracelet } from '@/store/types';
 import { toast } from 'sonner';
-import { Plus, Battery, Wifi, WifiOff } from 'lucide-react';
+import { Plus, Battery, Wifi, WifiOff, LogOut } from 'lucide-react';
 
 const statusConfig = {
   'available': { label: 'Disponível', dot: 'bg-success', bg: 'bg-success/10' },
@@ -50,8 +51,20 @@ const ConnectivityBadge = ({ bracelet }: { bracelet: Bracelet }) => {
 };
 
 const Pulseiras = () => {
-  const { bracelets, addBracelet } = useBracelets();
+  const { bracelets, addBracelet, updateBracelet } = useBracelets();
+  const { updateChild } = useChildren();
   const [filter, setFilter] = useState<typeof filters[number]>('Todas');
+
+  const handleCheckout = async (b: Bracelet) => {
+    if (!b.childId) return;
+    try {
+      await updateChild(b.childId, { status: 'left', braceletNumber: null });
+      await updateBracelet(b.id, { status: 'available', guardianName: null, childId: null });
+      toast(`Pulseira #${b.number} liberada e criança sofreu check-out! 🐑`);
+    } catch {
+      toast.error('Erro ao liberar pulseira');
+    }
+  };
 
   const filtered = bracelets.filter((b) => {
     if (filter === 'Disponíveis') return b.status === 'available';
@@ -111,6 +124,13 @@ const Pulseiras = () => {
               {b.battery < 15 && <p className="text-xs text-urgent font-medium mt-1">⚠ Bateria crítica</p>}
               {b.guardianName && <p className="text-xs text-muted-foreground mt-2 truncate">{b.guardianName}</p>}
               <ConnectivityBadge bracelet={b} />
+              
+              {b.status === 'in-use' && (
+                <button onClick={() => handleCheckout(b)} className="mt-4 w-full bg-muted text-muted-foreground hover:bg-urgent/10 hover:text-urgent text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                  <LogOut className="w-3.5 h-3.5" />
+                  Desvincular
+                </button>
+              )}
             </div>
           );
         })}

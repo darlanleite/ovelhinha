@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAppStore } from '@/store/useAppStore';
 import { useChildren } from '@/hooks/useChildren';
 import { useCalls } from '@/hooks/useCalls';
@@ -28,6 +29,8 @@ const TiaDaSala = () => {
   const [query, setQuery] = useState('');
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [arrival, setArrival] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scannedChildId, setScannedChildId] = useState<string | null>(null);
 
   const filtered = query.trim()
     ? roomChildren.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
@@ -49,6 +52,25 @@ const TiaDaSala = () => {
       return () => clearTimeout(t);
     }
   }, [arrival]);
+
+  useEffect(() => {
+    if (scanning) {
+      const scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+      scanner.render((text) => {
+        scanner.clear();
+        setScanning(false);
+        const childExists = roomChildren.find(c => c.id === text);
+        if (childExists) {
+          setQuery(childExists.name);
+          setScannedChildId(childExists.id);
+          toast.success(`Criança encontrada: ${childExists.name}`);
+        } else {
+          toast.error("QR Code não reconhecido nesta sala");
+        }
+      }, () => {});
+      return () => { scanner.clear().catch(() => {}); };
+    }
+  }, [scanning, roomChildren]);
 
   const handleCall = async (childId: string, reasonIdx: number) => {
     const child = children.find((c) => c.id === childId);
@@ -82,6 +104,20 @@ const TiaDaSala = () => {
     );
   }
 
+  if (scanning) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col pt-[env(safe-area-inset-top)]">
+        <header className="px-4 py-4 flex items-center justify-between">
+          <span className="text-white font-bold">Escaneando Etiqueta...</span>
+          <button onClick={() => setScanning(false)} className="text-white text-sm bg-white/20 px-3 py-1 rounded-lg">Cancelar</button>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center bg-black overflow-hidden relative">
+          <div id="qr-reader" className="w-full max-w-[400px] h-[400px] bg-white rounded-lg overflow-hidden [&_*]:font-sans [&_button]:bg-primary [&_button]:text-white [&_button]:px-4 [&_button]:py-2 [&_button]:rounded-lg [&_button]:font-bold [&_button]:border-0" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background max-w-[430px] mx-auto">
       {arrival && (
@@ -97,7 +133,7 @@ const TiaDaSala = () => {
       </header>
 
       <div className="p-6 flex justify-center">
-        <button onClick={() => toast('📷 Scanner de etiqueta (simulado)')} className="w-28 h-28 rounded-full bg-primary flex flex-col items-center justify-center hover:bg-primary-hover transition-colors shadow-medium">
+        <button onClick={() => setScanning(true)} className="w-28 h-28 rounded-full bg-primary flex flex-col items-center justify-center hover:bg-primary-hover transition-colors shadow-medium">
           <Camera className="w-8 h-8 text-primary-foreground mb-1" />
           <span className="text-primary-foreground text-xs font-bold">Escanear</span>
         </button>
@@ -113,15 +149,23 @@ const TiaDaSala = () => {
 
       <div className="px-4 space-y-2 pb-6">
         {filtered.map((child) => (
-          <ChildRow key={child.id} child={child} onCall={handleCall} />
+          <ChildRow key={child.id} child={child} onCall={handleCall} autoOpen={scannedChildId === child.id} onClearAutoOpen={() => setScannedChildId(null)} />
         ))}
       </div>
     </div>
   );
 };
 
-const ChildRow = ({ child, onCall }: { child: any; onCall: (id: string, reason: number) => void }) => {
+const ChildRow = ({ child, onCall, autoOpen, onClearAutoOpen }: { child: any; onCall: (id: string, reason: number) => void; autoOpen?: boolean; onClearAutoOpen?: () => void }) => {
   const [showReasons, setShowReasons] = useState(false);
+  
+  useEffect(() => {
+    if (autoOpen) {
+      setShowReasons(true);
+      if (onClearAutoOpen) onClearAutoOpen();
+    }
+  }, [autoOpen, onClearAutoOpen]);
+
   return (
     <div className="bg-card rounded-card border border-border overflow-hidden">
       <div className="flex items-center gap-3 p-4">

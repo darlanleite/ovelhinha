@@ -112,24 +112,28 @@ export function useChurch() {
   }
 
   async function novoCulto() {
-    const { error } = await supabase.rpc('close_service', { p_church_id: CHURCH_ID })
-    if (error) {
-      // Fallback manual
-      const [childrenRes, callsRes] = await Promise.all([
-        supabase.from('children').select('id', { count: 'exact' }).eq('church_id', CHURCH_ID),
-        supabase.from('calls').select('id', { count: 'exact' }).eq('church_id', CHURCH_ID),
-      ])
-      await supabase.from('service_history').insert({
-        church_id: CHURCH_ID,
-        service_date: new Date().toISOString().split('T')[0],
-        service_name: 'Culto',
-        children_count: childrenRes.count || 0,
-        calls_count: callsRes.count || 0,
-      })
-      await supabase.from('calls').delete().eq('church_id', CHURCH_ID)
-      await supabase.from('children').delete().eq('church_id', CHURCH_ID)
-      await supabase.from('bracelets').update({ status: 'available', guardian_name: null, child_id: null }).eq('church_id', CHURCH_ID).eq('status', 'in-use')
-    }
+    // Para termos Cadastro Recorrente, não podemos deletar as crianças,
+    // então faremos os updates diretamente ao invés de usar a antiga RPC close_service que excluía os dados.
+    const [childrenRes, callsRes] = await Promise.all([
+      supabase.from('children').select('id', { count: 'exact' }).eq('church_id', CHURCH_ID).neq('status', 'left'),
+      supabase.from('calls').select('id', { count: 'exact' }).eq('church_id', CHURCH_ID)
+    ])
+    
+    await supabase.from('service_history').insert({
+      church_id: CHURCH_ID,
+      service_date: new Date().toISOString().split('T')[0],
+      service_name: 'Culto',
+      children_count: childrenRes.count || 0,
+      calls_count: callsRes.count || 0,
+    })
+    
+    // Apaga as chamadas pendentes/antigas para limpar os relatórios do dia
+    await supabase.from('calls').delete().eq('church_id', CHURCH_ID)
+    
+    // Libera todas as pulseiras e reseta o status das crianças (mas MANTÉM OS CADASTROS)
+    await supabase.from('bracelets').update({ status: 'available', guardian_name: null, child_id: null }).eq('church_id', CHURCH_ID).eq('status', 'in-use')
+    await supabase.from('children').update({ status: 'left', bracelet_number: null }).eq('church_id', CHURCH_ID).neq('status', 'left')
+
     queryClient.invalidateQueries({ queryKey: ['children', CHURCH_ID] })
     queryClient.invalidateQueries({ queryKey: ['calls', CHURCH_ID] })
     queryClient.invalidateQueries({ queryKey: ['bracelets', CHURCH_ID] })

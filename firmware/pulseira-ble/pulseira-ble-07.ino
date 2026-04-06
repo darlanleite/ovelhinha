@@ -121,6 +121,13 @@ void setup() {
   NimBLEDevice::init(BLE_NAME);
   NimBLEDevice::setPower(ESP_PWR_LVL_P9);
 
+  // Imprime MAC BLE — copie este valor para o campo esp_id no app (lowercase)
+  String mac = NimBLEDevice::getAddress().toString().c_str();
+  mac.toLowerCase();
+  Serial.print(">>> MAC BLE: ");
+  Serial.println(mac);
+  Serial.println("    Use esse valor no campo esp_id em Configuracoes > ESP32");
+
   NimBLEServer* pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 

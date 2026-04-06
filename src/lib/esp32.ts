@@ -1,16 +1,15 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
+import { supabase, CHURCH_ID } from './supabase'
 
 export async function acionarPulseira(braceletId: string, reason?: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/acionar`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
-      },
-      body: JSON.stringify({ braceletId, reason })
+    const { error } = await supabase.from('gateway_commands').insert({
+      church_id: CHURCH_ID,
+      bracelet_id: braceletId,
+      command: 'acionar',
+      reason: reason || null,
+      status: 'pending',
     })
-    return res.ok
+    return !error
   } catch {
     return false
   }
@@ -18,15 +17,14 @@ export async function acionarPulseira(braceletId: string, reason?: string) {
 
 export async function encerrarPulseira(braceletId: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/encerrar`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
-      },
-      body: JSON.stringify({ braceletId })
+    const { error } = await supabase.from('gateway_commands').insert({
+      church_id: CHURCH_ID,
+      bracelet_id: braceletId,
+      command: 'encerrar',
+      reason: null,
+      status: 'pending',
     })
-    return res.ok
+    return !error
   } catch {
     return false
   }

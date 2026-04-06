@@ -197,8 +197,9 @@ public:
     // NimBLE retorna MAC em uppercase — converte para comparar
     String addr = String(device->getAddress().toString().c_str());
     addr.toLowerCase();
+    Serial.printf("[BLE] Encontrado: %s (RSSI: %d)\n", addr.c_str(), device->getRSSI());
     if (addr.equals(String(targetMAC))) {
-      Serial.printf("[BLE] Dispositivo encontrado: %s\n", targetMAC);
+      Serial.printf("[BLE] Alvo encontrado: %s\n", targetMAC);
       foundDevice   = const_cast<NimBLEAdvertisedDevice*>(device);
       deviceFound   = true;
       NimBLEDevice::getScan()->stop();

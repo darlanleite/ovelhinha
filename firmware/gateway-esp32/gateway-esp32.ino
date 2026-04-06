@@ -192,19 +192,19 @@ class GatewayScanCallbacks : public NimBLEScanCallbacks {
 public:
   char targetMAC[18]; // MAC alvo em lowercase
 
-  void onResult(NimBLEAdvertisedDevice* device) override {
+  void onResult(const NimBLEAdvertisedDevice* device) override {
     // NimBLE retorna MAC em uppercase — converte para comparar
     String addr = String(device->getAddress().toString().c_str());
     addr.toLowerCase();
     if (addr.equals(String(targetMAC))) {
       Serial.printf("[BLE] Dispositivo encontrado: %s\n", targetMAC);
-      foundDevice   = device;
+      foundDevice   = const_cast<NimBLEAdvertisedDevice*>(device);
       deviceFound   = true;
       NimBLEDevice::getScan()->stop();
     }
   }
 
-  void onScanEnd(NimBLEScanResults results) override {
+  void onScanEnd(const NimBLEScanResults& results, int reason) override {
     scanEnded = true;
     Serial.println("[BLE] Scan encerrado");
   }
@@ -686,7 +686,7 @@ bool doConnectAndSend() {
 
   NimBLEClient* pClient = NimBLEDevice::createClient();
   pClient->setConnectionParams(12, 12, 0, 51);
-  pClient->setTimeout(5);
+  pClient->setConnectTimeout(5);
 
   if (!pClient->connect(foundDevice)) {
     Serial.println("[BLE] Falha na conexão");

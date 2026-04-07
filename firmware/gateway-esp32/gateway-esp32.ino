@@ -681,42 +681,38 @@ void tickBLE() {
 // Conecta na pulseira e envia byte BLE — bloqueante ~300–500 ms
 bool doConnectAndSend() {
   // Scan bloqueante para descobrir endereço + tipo correto do dispositivo
-  String targetMAC = String(activeItem.esp_id);
-  targetMAC.toLowerCase();
+  deviceFound = false;
+  scanEnded   = false;
+  strlcpy(scanCallbacks.targetMAC, activeItem.esp_id, 18);
 
   NimBLEScan* pScan = NimBLEDevice::getScan();
   pScan->clearResults();
+  pScan->setScanCallbacks(&scanCallbacks, false);
   pScan->setActiveScan(true);
   pScan->setInterval(100);
   pScan->setWindow(99);
+  pScan->start(BLE_SCAN_TIMEOUT / 1000, false); // NimBLE 2.x: retorna bool, não bloqueante
 
-  NimBLEAddress foundAddr;
-  bool found = false;
-
-  NimBLEScanResults results = pScan->start(BLE_SCAN_TIMEOUT / 1000);
-  for (int i = 0; i < results.getCount(); i++) {
-    const NimBLEAdvertisedDevice* dev = results.getDevice(i);
-    String addr = String(dev->getAddress().toString().c_str());
-    addr.toLowerCase();
-    Serial.printf("[BLE] Scan: %s\n", addr.c_str());
-    if (addr == targetMAC) {
-      foundAddr = dev->getAddress(); // preserva tipo de endereço correto
-      found = true;
-      break;
-    }
+  // Aguarda scan terminar ou dispositivo ser encontrado
+  unsigned long deadline = millis() + (unsigned long)BLE_SCAN_TIMEOUT + 1000;
+  while (!scanEnded && !deviceFound && millis() < deadline) {
+    delay(50);
   }
-  pScan->clearResults();
+  pScan->stop();
 
-  if (!found) {
-    Serial.printf("[BLE] Dispositivo não encontrado: %s\n", activeItem.esp_id);
+  if (!deviceFound) {
+    Serial.printf("[BLE] Não encontrado no scan: %s\n", activeItem.esp_id);
+    pScan->clearResults();
     return false;
   }
 
   Serial.printf("[BLE] Encontrado: %s — conectando...\n", activeItem.esp_id);
+  pScan->clearResults();
+
   NimBLEClient* pClient = NimBLEDevice::createClient();
   pClient->setConnectTimeout(10);
 
-  if (!pClient->connect(foundAddr)) {
+  if (!pClient->connect(foundAddress)) {
     Serial.println("[BLE] Falha na conexão");
     NimBLEDevice::deleteClient(pClient);
     return false;

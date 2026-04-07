@@ -614,26 +614,11 @@ void processQueue() {
 void startBLEExec(QueueItem& item) {
   activeItem   = item;
   bleOccupied  = true;
-  deviceFound  = false;
-  scanEnded    = false;
-  foundDevice  = nullptr;
-  bleScanStart = millis();
-  bleExecState = BLE_EXEC_SCANNING;
-
-  // Configura e inicia scan BLE em background (não-bloqueante)
-  NimBLEScan* pScan = NimBLEDevice::getScan();
-  pScan->stop();
-  pScan->clearResults();
-  pScan->setScanCallbacks(&scanCallbacks, false);
-  pScan->setActiveScan(true);
-  pScan->setInterval(100);
-  pScan->setWindow(99);
-
-  strlcpy(scanCallbacks.targetMAC, item.esp_id, 18);
-  pScan->start(BLE_SCAN_TIMEOUT / 1000, false);
+  deviceFound  = true; // conexão direta sem scan
+  bleExecState = BLE_EXEC_CONNECTING;
 
   setLedMode(LED_BLUE_BLINK);
-  Serial.printf("[BLE] Buscando %s | cmd: %s | motivo: %s\n",
+  Serial.printf("[BLE] Conectando direto em %s | cmd: %s | motivo: %s\n",
     item.esp_id, item.command, item.reason);
 }
 
@@ -695,13 +680,16 @@ void tickBLE() {
 
 // Conecta na pulseira e envia byte BLE — bloqueante ~300–500 ms
 bool doConnectAndSend() {
-  if (!deviceFound) return false;
-
   NimBLEClient* pClient = NimBLEDevice::createClient();
-  pClient->setConnectionParams(12, 12, 0, 51);
-  pClient->setConnectTimeout(10);
+  pClient->setConnectTimeout(15);
 
-  if (!pClient->connect(foundAddress)) {
+  // Tenta primeiro como endereço random (padrão do ESP32-C3 com NimBLE)
+  // depois como public como fallback
+  bool connected = pClient->connect(NimBLEAddress(activeItem.esp_id, BLE_ADDR_RANDOM));
+  if (!connected) {
+    connected = pClient->connect(NimBLEAddress(activeItem.esp_id, BLE_ADDR_PUBLIC));
+  }
+  if (!connected) {
     Serial.println("[BLE] Falha na conexão");
     NimBLEDevice::deleteClient(pClient);
     return false;

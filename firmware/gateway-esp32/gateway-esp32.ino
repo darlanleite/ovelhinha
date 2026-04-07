@@ -177,8 +177,7 @@ bool          bleOccupied   = false;
 bool          deviceFound   = false;
 bool          scanEnded     = false;
 unsigned long bleScanStart  = 0;
-NimBLEAddress           foundAddress;
-NimBLEAdvertisedDevice* foundDevice = nullptr;
+NimBLEAddress foundAddress;
 
 // Estado LED
 LedMode       currentLedMode = LED_OFF;
@@ -201,10 +200,10 @@ public:
     Serial.printf("[BLE] Encontrado: %s (RSSI: %d)\n", addr.c_str(), device->getRSSI());
     if (addr.equals(String(targetMAC))) {
       Serial.printf("[BLE] Alvo encontrado: %s\n", targetMAC);
-      foundAddress  = device->getAddress();  // copia o endereço antes do scan limpar
-      foundDevice   = const_cast<NimBLEAdvertisedDevice*>(device);
-      deviceFound   = true;
-      NimBLEDevice::getScan()->stop();
+      foundAddress = device->getAddress();  // copia endereço + tipo antes do scan limpar
+      deviceFound  = true;
+      // NÃO chamar stop() aqui — chamar stop() de dentro do callback corromperia o BLE stack
+      // O loop principal (doConnectAndSend) chama stop() após detectar deviceFound=true
     }
   }
 
@@ -521,20 +520,28 @@ bool httpPost(const char* url, const char* body) {
 // ============================================================
 void registerGateway() {
   Serial.println("[HTTP] Registrando gateway...");
-  String now     = getISOTime();
-  String patchUrl = String(SUPABASE_URL)
-    + "/rest/v1/gateways?church_id=eq." + CHURCH_ID + "&name=eq.Gateway-01";
-  String body = "{\"last_seen\":\"" + now + "\"}";
+  String now = getISOTime();
 
-  // Tenta atualizar — se não existir, insere
-  bool updated = httpPatch(patchUrl.c_str(), body.c_str());
-  if (!updated) {
+  // Verifica se já existe uma linha para este gateway
+  String checkUrl = String(SUPABASE_URL)
+    + "/rest/v1/gateways?church_id=eq." + CHURCH_ID
+    + "&name=eq.Gateway-01&select=id&limit=1";
+  String existing = httpGet(checkUrl.c_str());
+
+  // "[]" = sem linha → insere. Qualquer outra resposta (ex: [{"id":...}]) → atualiza
+  if (existing == "[]" || existing.isEmpty()) {
     String insertUrl  = String(SUPABASE_URL) + "/rest/v1/gateways";
     String insertBody = "{\"church_id\":\"" + String(CHURCH_ID)
       + "\",\"name\":\"Gateway-01\",\"last_seen\":\"" + now + "\"}";
     httpPost(insertUrl.c_str(), insertBody.c_str());
+    Serial.println("[HTTP] Gateway inserido");
+  } else {
+    String patchUrl = String(SUPABASE_URL)
+      + "/rest/v1/gateways?church_id=eq." + CHURCH_ID + "&name=eq.Gateway-01";
+    String body = "{\"last_seen\":\"" + now + "\"}";
+    httpPatch(patchUrl.c_str(), body.c_str());
+    Serial.println("[HTTP] Gateway atualizado");
   }
-  Serial.println("[HTTP] Gateway registrado");
 }
 
 void pollCommands() {
@@ -686,16 +693,26 @@ bool doConnectAndSend() {
   strlcpy(scanCallbacks.targetMAC, activeItem.esp_id, 18);
 
   NimBLEScan* pScan = NimBLEDevice::getScan();
-  pScan->clearResults();
   pScan->setScanCallbacks(&scanCallbacks, false);
-  pScan->setActiveScan(true);
+  pScan->setActiveScan(true); // active: envia SCAN_REQ — necessário para detectar no ESP32-C3
   pScan->setInterval(100);
   pScan->setWindow(99);
-  pScan->start(BLE_SCAN_TIMEOUT / 1000, false); // NimBLE 2.x: retorna bool, não bloqueante
 
-  // Aguarda dispositivo ser encontrado ou timeout — ignora onScanEnd precoce do NimBLE 2.x
+  // Scan indefinido (duration=0): só para quando chamarmos stop() ou deviceFound=true
+  // Reinicia se onScanEnd disparar prematuramente (bug NimBLE 2.x no ESP32-C3)
   unsigned long deadline = millis() + (unsigned long)BLE_SCAN_TIMEOUT;
+  pScan->clearResults();
+  scanEnded = false;
+  pScan->start(0, false);
+
   while (!deviceFound && millis() < deadline) {
+    if (scanEnded) {
+      // onScanEnd disparou antes do tempo — reinicia o scan
+      scanEnded = false;
+      pScan->clearResults();
+      pScan->start(0, false);
+      Serial.println("[BLE] Scan reiniciado (onScanEnd precoce)");
+    }
     delay(50);
   }
   pScan->stop();
@@ -708,11 +725,11 @@ bool doConnectAndSend() {
 
   Serial.printf("[BLE] Encontrado: %s — conectando...\n", activeItem.esp_id);
   pScan->clearResults();
-  delay(300); // Aguarda BLE stack sair do modo scan antes de conectar
+  delay(500); // Aguarda BLE stack sair completamente do modo scan antes de conectar
 
   NimBLEClient* pClient = NimBLEDevice::createClient();
   pClient->setConnectionParams(12, 12, 0, 51);
-  pClient->setConnectTimeout(10);
+  pClient->setConnectTimeout(10000); // NimBLE 2.x usa ms (não segundos) — 10000ms = 10s
 
   if (!pClient->connect(foundAddress)) {
     Serial.println("[BLE] Falha na conexão");
@@ -781,6 +798,10 @@ void setup() {
     delay(200);
   }
   Serial.printf("[WIFI] Conectado! IP: %s\n", WiFi.localIP().toString().c_str());
+
+  // Desativa sleep do WiFi — essencial para coexistência BLE+WiFi no ESP32-C3
+  // Sem isso, o rádio compartilhado pode dropar pacotes WiFi durante atividade BLE
+  WiFi.setSleep(false);
 
   // Sincroniza NTP para timestamps corretos
   syncNTP();

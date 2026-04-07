@@ -131,6 +131,7 @@ struct BraceletMap {
 enum LedMode {
   LED_OFF,
   LED_GREEN,
+  LED_GREEN_BLINK, // verde piscando lento — gateway pronto/idle
   LED_RED_SOLID,
   LED_RED_BLINK,
   LED_BLUE_BLINK,
@@ -278,9 +279,10 @@ void updateLed() {
   unsigned long interval;
 
   switch (currentLedMode) {
-    case LED_BLUE_BLINK:  interval = 300; break;
-    case LED_RED_BLINK:   interval = 500; break;
-    default:              interval = 120; break; // pulsos rápidos
+    case LED_GREEN_BLINK: interval = 1000; break; // piscando lento — idle
+    case LED_BLUE_BLINK:  interval = 300;  break;
+    case LED_RED_BLINK:   interval = 500;  break;
+    default:              interval = 120;  break; // pulsos rápidos
   }
 
   if (now - ledLastToggle < interval) return;
@@ -288,6 +290,10 @@ void updateLed() {
   ledBlinkState = !ledBlinkState;
 
   switch (currentLedMode) {
+    case LED_GREEN_BLINK:
+      setColor(0, ledBlinkState ? 1 : 0, 0);
+      break;
+
     case LED_BLUE_BLINK:
       setColor(0, 0, ledBlinkState ? 1 : 0);
       break;
@@ -821,7 +827,7 @@ void setup() {
   registerGateway();
 
   // Pronto
-  setLedMode(LED_GREEN);
+  setLedMode(LED_GREEN_BLINK);
   Serial.println("[BOOT] Gateway pronto!");
 }
 
@@ -846,7 +852,9 @@ void loop() {
         wifiWasLost = true;
         Serial.println("[WIFI] Conexão perdida — reconectando...");
       }
-      setLedMode(LED_RED_BLINK);
+      // Não sobrescreve o LED azul durante execução BLE —
+      // queda de WiFi durante BLE é esperada (rádio compartilhado no ESP32-C3)
+      if (!bleOccupied) setLedMode(LED_RED_BLINK);
       WiFi.reconnect();
       // Reinicia após 60s sem conexão
       if (now - wifiLostAt > WIFI_RESTART_MS) {
@@ -857,7 +865,7 @@ void loop() {
       wifiWasLost = false;
       wifiLostAt  = 0;
       Serial.println("[WIFI] Reconectado!");
-      if (!bleOccupied) setLedMode(LED_GREEN);
+      if (!bleOccupied) setLedMode(LED_GREEN_BLINK);
     }
   }
 

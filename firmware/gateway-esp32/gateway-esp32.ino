@@ -693,9 +693,9 @@ bool doConnectAndSend() {
   pScan->setWindow(99);
   pScan->start(BLE_SCAN_TIMEOUT / 1000, false); // NimBLE 2.x: retorna bool, não bloqueante
 
-  // Aguarda scan terminar ou dispositivo ser encontrado
-  unsigned long deadline = millis() + (unsigned long)BLE_SCAN_TIMEOUT + 1000;
-  while (!scanEnded && !deviceFound && millis() < deadline) {
+  // Aguarda dispositivo ser encontrado ou timeout — ignora onScanEnd precoce do NimBLE 2.x
+  unsigned long deadline = millis() + (unsigned long)BLE_SCAN_TIMEOUT;
+  while (!deviceFound && millis() < deadline) {
     delay(50);
   }
   pScan->stop();

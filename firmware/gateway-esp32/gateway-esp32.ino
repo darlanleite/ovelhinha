@@ -279,7 +279,7 @@ void updateLed() {
   unsigned long interval;
 
   switch (currentLedMode) {
-    case LED_GREEN_BLINK: interval = 1000; break; // piscando lento — idle
+    case LED_GREEN_BLINK: interval = ledBlinkState ? 80 : 1800; break; // flash rápido + pausa longa — idle
     case LED_BLUE_BLINK:  interval = 300;  break;
     case LED_RED_BLINK:   interval = 500;  break;
     default:              interval = 120;  break; // pulsos rápidos

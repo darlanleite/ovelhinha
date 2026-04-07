@@ -682,11 +682,12 @@ void tickBLE() {
 // Conecta na pulseira e envia byte BLE — bloqueante ~300–500 ms
 bool doConnectAndSend() {
   NimBLEClient* pClient = NimBLEDevice::createClient();
-  pClient->setConnectTimeout(15);
 
-  // ESP32-C3 usa endereço público por padrão — tenta public primeiro, random como fallback
+  // Tenta PUBLIC com timeout curto, depois RANDOM com timeout maior
+  pClient->setConnectTimeout(3);
   bool connected = pClient->connect(NimBLEAddress(activeItem.esp_id, BLE_ADDR_PUBLIC));
   if (!connected) {
+    pClient->setConnectTimeout(12);
     connected = pClient->connect(NimBLEAddress(activeItem.esp_id, BLE_ADDR_RANDOM));
   }
   if (!connected) {

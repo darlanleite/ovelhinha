@@ -64,8 +64,8 @@ export function useCalls() {
     roomId: string
     reason: string
     reasonIcon: string
-  }) {
-    const { error } = await supabase.from('calls').insert({
+  }): Promise<string> {
+    const { data: row, error } = await supabase.from('calls').insert({
       church_id: CHURCH_ID,
       child_id: data.childId,
       bracelet_number: data.braceletNumber,
@@ -73,8 +73,9 @@ export function useCalls() {
       reason: data.reason,
       reason_icon: data.reasonIcon,
       status: 'open',
-    })
+    }).select('id').single()
     if (error) throw error
+    return row.id as string
   }
 
   async function answerCall(callId: string, answeredBy: 'reception' | 'tia') {

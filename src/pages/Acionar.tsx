@@ -44,9 +44,20 @@ const Acionar = () => {
 
   const handleCall = async () => {
     if (!child || selectedReason === null) return;
+
+    // Pulseira já acionada — mostra tela de espera em vez de criar duplicata
+    if (child.status === 'called') {
+      const existing = calls.find((c) => c.childId === child.id && (c.status === 'open' || c.status === 'reactivated'));
+      if (existing) {
+        toast.warning(`Pulseira #${child.braceletNumber} já está acionada`);
+        setActiveCallId(existing.id);
+        return;
+      }
+    }
+
     setCalling(true);
     try {
-      await addCall({
+      const callId = await addCall({
         childId: child.id,
         braceletNumber: child.braceletNumber || '??',
         roomId: child.roomId,
@@ -54,9 +65,7 @@ const Acionar = () => {
         reasonIcon: reasons[selectedReason].icon,
       });
       await updateChild(child.id, { status: 'called' });
-      // Find the call we just created
-      const newCall = calls.find((c) => c.childId === child.id && c.status === 'open');
-      if (newCall) setActiveCallId(newCall.id);
+      setActiveCallId(callId);
       toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
       acionarPulseira(child.braceletNumber || '??', reasons[selectedReason].label).catch(() => {});
     } catch {

@@ -37,6 +37,14 @@ export default defineConfig(({ mode }) => ({
           { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
           { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
         ],
+        shortcuts: [
+          {
+            name: "Gestor",
+            url: "/gestor",
+            description: "Painel de gestão mobile",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+          },
+        ],
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],

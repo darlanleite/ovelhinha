@@ -8,6 +8,9 @@ import OvelhinhaLogo from '@/components/OvelhinhaLogo';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string })?.from;
   const isMobile = useIsMobile();
   const [role, setRole] = useState<'reception' | 'tia' | null>(null);
   const receptionRoutes = ['/dashboard', '/cadastro', '/acionar', '/pulseiras', '/relatorios', '/configuracoes', '/gestor'];
@@ -18,9 +21,6 @@ const Login = () => {
   const login = useAppStore((s) => s.login);
   const { settings, rooms } = useChurch();
   const [selectedRoom, setSelectedRoom] = useState('');
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: string })?.from;
 
   useEffect(() => {
     if (rooms.length > 0 && !selectedRoom) setSelectedRoom(rooms[0].id);

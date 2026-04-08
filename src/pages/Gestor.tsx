@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Search, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useChildren } from '@/hooks/useChildren';
@@ -7,7 +6,6 @@ import { useCalls } from '@/hooks/useCalls';
 import { useBracelets } from '@/hooks/useBracelets';
 import { useChurch } from '@/hooks/useChurch';
 import { useGateway } from '@/hooks/useGateway';
-import { useAppStore } from '@/store/useAppStore';
 import { acionarPulseira, encerrarPulseira } from '@/lib/esp32';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
 import type { Call } from '@/store/types';
@@ -328,15 +326,62 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
+// ─── PIN gate (auth independente do Zustand) ──────────────────────────────────
+
+const GESTOR_KEY = 'ovelhinha-gestor'
+const GESTOR_PIN = '1234'
+
+function GestorPin({ onAuth }: { onAuth: () => void }) {
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pin === GESTOR_PIN) {
+      localStorage.setItem(GESTOR_KEY, '1')
+      onAuth()
+    } else {
+      setError(true)
+      setPin('')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="w-full max-w-xs animate-fade-in">
+        <div className="flex justify-center mb-6">
+          <OvelhinhaLogo size={64} />
+        </div>
+        <form onSubmit={handleSubmit} className="bg-card rounded-card border border-border p-6 shadow-soft space-y-4">
+          <h2 className="font-heading font-extrabold text-lg text-foreground text-center">Gestor</h2>
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => { setPin(e.target.value); setError(false) }}
+            placeholder="Senha"
+            autoFocus
+            className={`w-full px-4 py-3 rounded-lg border text-center text-xl tracking-widest font-mono bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all ${error ? 'border-urgent' : 'border-border focus:border-primary'}`}
+          />
+          {error && <p className="text-xs text-urgent text-center">Senha incorreta</p>}
+          <button type="submit" className="w-full bg-primary text-primary-foreground font-heading font-extrabold py-3 rounded-lg hover:opacity-90 transition-opacity">
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 type Tab = 'calls' | 'acionar' | 'status';
 
 const Gestor = () => {
-  const navigate = useNavigate();
-  const logout = useAppStore((s) => s.logout);
+  const [authed, setAuthed] = useState(() => localStorage.getItem(GESTOR_KEY) === '1')
   const { openCalls } = useCalls();
   const [tab, setTab] = useState<Tab>('calls');
+
+  if (!authed) return <GestorPin onAuth={() => setAuthed(true)} />
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'calls', label: 'Chamadas', icon: '🔔' },
@@ -355,7 +400,7 @@ const Gestor = () => {
           </span>
         )}
         <button
-          onClick={() => { logout(); navigate('/'); }}
+          onClick={() => { localStorage.removeItem(GESTOR_KEY); setAuthed(false) }}
           className="ml-auto text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1"
         >
           <LogOut className="w-4 h-4" />

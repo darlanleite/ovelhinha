@@ -59,7 +59,7 @@ const App = () => (
           <Route path="/relatorios" element={<ReceptionPage><Relatorios /></ReceptionPage>} />
           <Route path="/configuracoes" element={<ReceptionPage><Configuracoes /></ReceptionPage>} />
           <Route path="/tia" element={<ProtectedRoute role="tia"><TiaDaSala /></ProtectedRoute>} />
-          <Route path="/gestor" element={<ProtectedRoute role="reception"><Gestor /></ProtectedRoute>} />
+          <Route path="/gestor" element={<Gestor />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

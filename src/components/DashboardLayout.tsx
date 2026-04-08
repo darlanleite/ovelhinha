@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, UserPlus, Watch, BarChart3, Settings, LogOut, Bell } from 'lucide-react';
+import { Home, UserPlus, Watch, BarChart3, Settings, LogOut, Bell, Smartphone } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useChurch } from '@/hooks/useChurch';
 import { useCalls } from '@/hooks/useCalls';
@@ -13,6 +13,7 @@ const navItems = [
   { path: '/pulseiras', label: 'Pulseiras', icon: Watch },
   { path: '/relatorios', label: 'Relatórios', icon: BarChart3 },
   { path: '/configuracoes', label: 'Configurações', icon: Settings },
+  { path: '/gestor', label: 'Gestor Mobile', icon: Smartphone },
 ];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {

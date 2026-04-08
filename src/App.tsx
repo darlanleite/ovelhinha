@@ -8,6 +8,7 @@ import Cadastro from "./pages/Cadastro";
 import Acionar from "./pages/Acionar";
 import Pulseiras from "./pages/Pulseiras";
 import TiaDaSala from "./pages/TiaDaSala";
+import Gestor from "./pages/Gestor";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import DashboardLayout from "./components/DashboardLayout";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/relatorios" element={<ReceptionPage><Relatorios /></ReceptionPage>} />
           <Route path="/configuracoes" element={<ReceptionPage><Configuracoes /></ReceptionPage>} />
           <Route path="/tia" element={<ProtectedRoute role="tia"><TiaDaSala /></ProtectedRoute>} />
+          <Route path="/gestor" element={<ProtectedRoute role="reception"><Gestor /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

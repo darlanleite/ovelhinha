@@ -8,6 +8,7 @@ import { Search, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { acionarPulseira } from '@/lib/esp32';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
+import { useNavigate } from 'react-router-dom';
 
 const reasons = [
   { icon: '🚽', label: 'Banheiro' },
@@ -20,6 +21,8 @@ const reasons = [
 
 const TiaDaSala = () => {
   const tiaRoom = useAppStore((s) => s.tiaRoom);
+  const navigate = useNavigate();
+  const isGestor = localStorage.getItem('ovelhinha-gestor') === '1';
   const { children, updateChild } = useChildren();
   const { calls, addCall } = useCalls();
   const { rooms } = useChurch();
@@ -130,7 +133,12 @@ const TiaDaSala = () => {
             ✓ {arrival}
           </div>
         )}
-        <span className="ml-auto text-primary-foreground/80 text-sm shrink-0">{room?.emoji} {room?.name}</span>
+        {isGestor && !arrival && (
+          <button onClick={() => navigate('/gestor')} className="ml-auto text-primary-foreground/60 hover:text-primary-foreground text-xs px-2 py-1 rounded transition-colors">
+            ⚙️
+          </button>
+        )}
+        <span className={`${isGestor && !arrival ? '' : 'ml-auto'} text-primary-foreground/80 text-sm shrink-0`}>{room?.emoji} {room?.name}</span>
       </header>
 
       <div className="p-6 flex justify-center">

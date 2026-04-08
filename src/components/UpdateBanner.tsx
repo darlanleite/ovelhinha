@@ -12,7 +12,7 @@ export function UpdateBanner() {
         <p className="text-sm font-medium text-white">Nova versão disponível</p>
       </div>
       <button
-        onClick={() => updateServiceWorker(true)}
+        onClick={() => { updateServiceWorker(false); window.location.href = '/' }}
         className="shrink-0 rounded-lg bg-white px-4 py-1.5 text-sm font-bold text-primary hover:bg-white/90 transition-colors"
       >
         Atualizar

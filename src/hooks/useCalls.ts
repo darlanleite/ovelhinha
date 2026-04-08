@@ -2,27 +2,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase, CHURCH_ID } from '@/lib/supabase'
 import type { Call } from '@/store/types'
-import { toast } from 'sonner'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-async function sendPush(payload: Record<string, unknown>) {
-  try {
-    const url = `${SUPABASE_URL}/functions/v1/notify-call`
-    console.log('[push] calling', url, payload)
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json()
-    console.log('[push] response', res.status, data)
-    toast(`[push] sent=${data.sent} found=${data.subscriptions_found} err=${data.errors?.length}`)
-  } catch (err) {
-    console.error('[push] error', err)
-    toast.error(`[push] erro: ${err}`)
-  }
+function sendPush(payload: Record<string, unknown>) {
+  fetch(`${SUPABASE_URL}/functions/v1/notify-call`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+    body: JSON.stringify(payload),
+  }).catch(() => {})
 }
 
 type CallRow = {

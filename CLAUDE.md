@@ -273,9 +273,39 @@ Atualizar `VITE_BACKEND_URL` no `.env` com a URL do ngrok.
 
 ---
 
-### Gateway (firmware/gateway-esp32/)
+### Gateway
 
-#### Configuração Arduino IDE
+#### Arquivos de firmware
+
+| Arquivo | Status | Descrição |
+|---------|--------|-----------|
+| `firmware/gateway-esp32/gateway-esp32.ino` | **Backup funcional (v1)** | Credenciais hardcoded em `config.h` — produção anterior |
+| `firmware/gateway_v2/gateway_v2.ino` | **Atual (v2)** | Captive portal Wi-Fi — sem `config.h` |
+
+**Não modificar o v1.** Ele existe como fallback caso o v2 precise de diagnóstico.
+
+#### Provisionamento Wi-Fi (v2)
+
+**Primeiro boot** (sem configuração):
+1. ESP32 sobe como AP com o nome **"Ovelhinha-GW"** (sem senha).
+2. Conecte o celular na rede "Ovelhinha-GW".
+3. O browser abre o portal automaticamente (ou acesse `192.168.4.1`).
+4. Preencha: SSID da rede, Senha, **Número do Gateway (1–9)**.
+5. Salve — o dispositivo reinicia e conecta normalmente.
+
+**Resetar configurações** (reabrir portal):
+- Segure o **botão BOOT (GPIO 9)** por **≥ 3 segundos** ao ligar.
+- LED pisca branco durante a contagem → branco sólido ao confirmar.
+- NVS apagada (SSID, senha, gw_num, gw_id) → portal reabre no próximo boot.
+
+**Reconexão após queda de Wi-Fi:** automática, portal **não** reabre. Portal só abre se as credenciais falharem ou após reset manual.
+
+#### Dependências do v2 (Library Manager)
+- NimBLE-Arduino by h2zero
+- ArduinoJson by Benoit Blanchon (v7.x)
+- **WiFiManager by tzapu** ← novo, instalar antes de compilar
+
+#### Configuração Arduino IDE (v1 e v2)
 - **Board:** ESP32C3 Dev Module
 - **Partition Scheme:** Huge APP (3MB No OTA/1MB SPIFFS) — firmware não cabe no esquema padrão
 - **Dependências:** NimBLE-Arduino by h2zero + ArduinoJson by Benoit Blanchon (v7.x)

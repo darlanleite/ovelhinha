@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { supabase, CHURCH_ID } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Bracelet } from '@/store/types'
 
-type BraceletRow = {
+export type BraceletRow = {
   id: string
   number: string
   esp_id: string | null
@@ -14,7 +15,7 @@ type BraceletRow = {
   last_seen_at: string | null
 }
 
-function deriveConnectivity(row: BraceletRow): 'online' | 'warning' | 'unreachable' {
+export function deriveConnectivity(row: Pick<BraceletRow, 'status' | 'last_seen_at'>): 'online' | 'warning' | 'unreachable' {
   if (row.status !== 'in-use') return 'online'
   if (!row.last_seen_at) return 'unreachable'
   const secs = Math.floor((Date.now() - new Date(row.last_seen_at).getTime()) / 1000)
@@ -40,14 +41,16 @@ function mapRow(row: BraceletRow): Bracelet {
 
 export function useBracelets() {
   const queryClient = useQueryClient()
+  const { churchId } = useAuth()
 
   const { data: bracelets = [], isLoading: loading } = useQuery({
-    queryKey: ['bracelets', CHURCH_ID],
+    queryKey: ['bracelets', churchId],
+    enabled: !!churchId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bracelets')
         .select('*')
-        .eq('church_id', CHURCH_ID)
+        .eq('church_id', churchId!)
         .order('number', { ascending: true })
       if (error) throw error
       return (data as BraceletRow[]).map(mapRow)
@@ -55,13 +58,14 @@ export function useBracelets() {
   })
 
   useEffect(() => {
+    if (!churchId) return
     const channel = supabase
-      .channel(`bracelets-${CHURCH_ID}-${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bracelets', filter: `church_id=eq.${CHURCH_ID}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bracelets', CHURCH_ID] }))
+      .channel(`bracelets-${churchId}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bracelets', filter: `church_id=eq.${churchId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] }))
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [queryClient])
+  }, [queryClient, churchId])
 
   const stats = {
     available: bracelets.filter((b) => b.status === 'available').length,
@@ -85,8 +89,9 @@ export function useBracelets() {
   }
 
   async function addBracelet(bracelet: Omit<Bracelet, 'id'>) {
+    if (!churchId) throw new Error('Sessão expirada')
     const { error } = await supabase.from('bracelets').insert({
-      church_id: CHURCH_ID,
+      church_id: churchId,
       number: bracelet.number,
       esp_id: bracelet.espId || null,
       status: bracelet.status,

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, UserPlus, Watch, BarChart3, Settings, LogOut, Bell } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/contexts/AuthContext';
 import { useChurch } from '@/hooks/useChurch';
 import { useCalls } from '@/hooks/useCalls';
 import { useAutoReactivate } from '@/hooks/useAutoReactivate';
@@ -19,13 +19,13 @@ const navItems = [
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useAppStore((s) => s.logout);
+  const { signOut } = useAuth();
   const { settings } = useChurch();
   const { openCalls, reactivateCall } = useCalls();
   useAutoReactivate(openCalls, settings.reactivateMinutes, reactivateCall);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 

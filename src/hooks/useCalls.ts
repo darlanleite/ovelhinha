@@ -1,17 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { supabase, CHURCH_ID } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Call } from '@/store/types'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
 function sendPush(payload: Record<string, unknown>) {
-  fetch(`${SUPABASE_URL}/functions/v1/notify-call`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
-    body: JSON.stringify(payload),
-  }).catch(() => {})
+  // functions.invoke envia o JWT da sessão automaticamente
+  supabase.functions.invoke('notify-call', { body: payload }).catch(() => {})
 }
 
 type CallRow = {
@@ -44,14 +39,16 @@ function mapRow(row: CallRow): Call {
 
 export function useCalls() {
   const queryClient = useQueryClient()
+  const { churchId } = useAuth()
 
   const { data: calls = [], isLoading: loading } = useQuery({
-    queryKey: ['calls', CHURCH_ID],
+    queryKey: ['calls', churchId],
+    enabled: !!churchId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('calls')
         .select('*')
-        .eq('church_id', CHURCH_ID)
+        .eq('church_id', churchId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data as CallRow[]).map(mapRow)
@@ -59,13 +56,14 @@ export function useCalls() {
   })
 
   useEffect(() => {
+    if (!churchId) return
     const channel = supabase
-      .channel(`calls-${CHURCH_ID}-${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls', filter: `church_id=eq.${CHURCH_ID}` },
-        () => queryClient.invalidateQueries({ queryKey: ['calls', CHURCH_ID] }))
+      .channel(`calls-${churchId}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls', filter: `church_id=eq.${churchId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['calls', churchId] }))
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [queryClient])
+  }, [queryClient, churchId])
 
   const openCalls = calls.filter((c) => c.status === 'open' || c.status === 'reactivated')
 
@@ -77,8 +75,9 @@ export function useCalls() {
     reason: string
     reasonIcon: string
   }): Promise<string> {
+    if (!churchId) throw new Error('Sessão expirada')
     const { data: row, error } = await supabase.from('calls').insert({
-      church_id: CHURCH_ID,
+      church_id: churchId,
       child_id: data.childId,
       bracelet_number: data.braceletNumber,
       room_id: data.roomId,
@@ -101,10 +100,9 @@ export function useCalls() {
       createdAt: row.created_at,
       answeredAt: null,
     }
-    queryClient.setQueryData(['calls', CHURCH_ID], (old: Call[] = []) => [newCall, ...old])
+    queryClient.setQueryData(['calls', churchId], (old: Call[] = []) => [newCall, ...old])
 
     sendPush({
-      church_id: CHURCH_ID,
       type: 'call_created',
       child_name: data.childName,
       bracelet_number: data.braceletNumber,
@@ -116,6 +114,7 @@ export function useCalls() {
   }
 
   async function answerCall(callId: string, answeredBy: 'reception' | 'tia', childName?: string) {
+    if (!churchId) throw new Error('Sessão expirada')
     const call = calls.find((c) => c.id === callId)
     const answeredAt = new Date().toISOString()
 
@@ -123,29 +122,21 @@ export function useCalls() {
       p_call_id: callId,
       p_answered_by: answeredBy,
     })
-    if (error) {
-      // Fallback se a função RPC não existir: faz os 3 updates manualmente
-      await supabase.from('calls').update({ status: 'answered', answered_at: answeredAt, answered_by: answeredBy }).eq('id', callId)
-      if (call) {
-        await supabase.from('children').update({ status: 'present' }).eq('id', call.childId)
-        await supabase.from('bracelets').update({ status: 'available', guardian_name: null, child_id: null }).eq('church_id', CHURCH_ID).eq('number', call.braceletNumber)
-      }
-    }
+    if (error) throw error
 
     // Atualiza caches locais imediatamente
-    queryClient.setQueryData(['calls', CHURCH_ID], (old: Call[] = []) =>
+    queryClient.setQueryData(['calls', churchId], (old: Call[] = []) =>
       old.map((c) => c.id === callId ? { ...c, status: 'answered' as const, answeredBy, answeredAt } : c)
     )
     if (call) {
-      queryClient.setQueryData(['children', CHURCH_ID], (old: Call[] = []) =>
-        old.map((c: any) => c.id === call.childId ? { ...c, status: 'present' } : c)
+      queryClient.setQueryData(['children', churchId], (old: { id: string }[] = []) =>
+        old.map((c) => c.id === call.childId ? { ...c, status: 'present' } : c)
       )
     }
-    queryClient.invalidateQueries({ queryKey: ['bracelets', CHURCH_ID] })
+    queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] })
 
     if (childName && call) {
       sendPush({
-        church_id: CHURCH_ID,
         type: 'call_answered',
         child_name: childName,
         bracelet_number: call.braceletNumber,

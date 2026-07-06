@@ -18,9 +18,10 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       tag: data.tag || 'ovelhinha',
+      // renotify existe no contexto de service worker mas falta no lib.dom do TS
       renotify: true,
       data: { url: data.url || '/' },
-    })
+    } as NotificationOptions)
   )
 })
 

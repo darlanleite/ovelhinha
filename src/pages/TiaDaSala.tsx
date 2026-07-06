@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { useAppStore } from '@/store/useAppStore';
+import { useAuth } from '@/contexts/AuthContext';
 import { useChildren } from '@/hooks/useChildren';
 import { useCalls } from '@/hooks/useCalls';
 import { useChurch } from '@/hooks/useChurch';
@@ -8,6 +8,7 @@ import { Search, Camera, Users, Bell, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { acionarPulseira } from '@/lib/esp32';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
+import type { Child } from '@/store/types';
 import { useNavigate } from 'react-router-dom';
 
 const reasons = [
@@ -20,7 +21,7 @@ const reasons = [
 ];
 
 const TiaDaSala = () => {
-  const tiaRoom = useAppStore((s) => s.tiaRoom);
+  const { tiaRoom, churchId } = useAuth();
   const navigate = useNavigate();
   const { children, updateChild } = useChildren();
   const { calls, addCall } = useCalls();
@@ -118,7 +119,7 @@ const TiaDaSala = () => {
           reasonIcon: '⚠️',
         });
         await updateChild(child.id, { status: 'called' });
-        acionarPulseira(child.braceletNumber || '??', 'Urgência').catch(() => {});
+        if (churchId) acionarPulseira(churchId, child.braceletNumber || '??', 'Urgência').catch(() => {});
       }
       toast.error(`⚠️ Emergência! ${uncalled.length} pais acionados`);
     } catch {
@@ -143,7 +144,7 @@ const TiaDaSala = () => {
       await updateChild(child.id, { status: 'called' });
       setConfirmation(child.name);
       toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
-      acionarPulseira(child.braceletNumber || '??', reasons[reasonIdx].label).catch(() => {});
+      if (churchId) acionarPulseira(churchId, child.braceletNumber || '??', reasons[reasonIdx].label).catch(() => {});
       setTimeout(() => setConfirmation(null), 3000);
     } catch {
       toast.error('Erro ao acionar pulseira');
@@ -324,7 +325,7 @@ const TiaDaSala = () => {
   );
 };
 
-const ChildRow = ({ child, onCall, autoOpen, onClearAutoOpen }: { child: any; onCall: (id: string, reason: number) => void; autoOpen?: boolean; onClearAutoOpen?: () => void }) => {
+const ChildRow = ({ child, onCall, autoOpen, onClearAutoOpen }: { child: Child; onCall: (id: string, reason: number) => void; autoOpen?: boolean; onClearAutoOpen?: () => void }) => {
   const [showReasons, setShowReasons] = useState(false);
   
   useEffect(() => {

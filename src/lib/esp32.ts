@@ -1,53 +1,49 @@
-import { supabase, CHURCH_ID } from './supabase'
+import { supabase } from './supabase'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+// Insere comandos na fila gateway_commands via cliente Supabase autenticado.
+// O gateway ESP32 faz poll dessa tabela e entrega via BLE.
 
-async function getBraceletUUID(braceletNumber: string): Promise<string | null> {
+async function getBraceletUUID(churchId: string, braceletNumber: string): Promise<string | null> {
   const { data } = await supabase
     .from('bracelets')
     .select('id')
-    .eq('church_id', CHURCH_ID)
+    .eq('church_id', churchId)
     .eq('number', braceletNumber)
     .single()
   return data?.id ?? null
 }
 
-async function insertGatewayCommand(braceletId: string, command: string, reason?: string) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/gateway_commands`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      church_id: CHURCH_ID,
-      bracelet_id: braceletId,
-      command,
-      reason: reason || null,
-      status: 'pending',
-    }),
+async function insertGatewayCommand(
+  churchId: string,
+  braceletId: string,
+  command: 'acionar' | 'encerrar',
+  reason?: string
+): Promise<boolean> {
+  const { error } = await supabase.from('gateway_commands').insert({
+    church_id: churchId,
+    bracelet_id: braceletId,
+    command,
+    reason: reason || null,
+    status: 'pending',
   })
-  return res.ok
+  return !error
 }
 
-export async function acionarPulseira(braceletNumber: string, reason?: string) {
+export async function acionarPulseira(churchId: string, braceletNumber: string, reason?: string) {
   try {
-    const braceletId = await getBraceletUUID(braceletNumber)
+    const braceletId = await getBraceletUUID(churchId, braceletNumber)
     if (!braceletId) return false
-    return await insertGatewayCommand(braceletId, 'acionar', reason)
+    return await insertGatewayCommand(churchId, braceletId, 'acionar', reason)
   } catch {
     return false
   }
 }
 
-export async function encerrarPulseira(braceletNumber: string) {
+export async function encerrarPulseira(churchId: string, braceletNumber: string) {
   try {
-    const braceletId = await getBraceletUUID(braceletNumber)
+    const braceletId = await getBraceletUUID(churchId, braceletNumber)
     if (!braceletId) return false
-    return await insertGatewayCommand(braceletId, 'encerrar')
+    return await insertGatewayCommand(churchId, braceletId, 'encerrar')
   } catch {
     return false
   }

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { supabase, CHURCH_ID } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Child, Guardian } from '@/store/types'
 
 type ChildRow = {
@@ -33,39 +34,43 @@ function mapRow(row: ChildRow): Child {
 
 export function useChildren() {
   const queryClient = useQueryClient()
+  const { churchId } = useAuth()
 
   const { data: children = [], isLoading: loading } = useQuery({
-    queryKey: ['children', CHURCH_ID],
+    queryKey: ['children', churchId],
+    enabled: !!churchId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('children')
         .select('*, guardians(*)')
-        .eq('church_id', CHURCH_ID)
+        .eq('church_id', churchId!)
         .order('checked_in_at', { ascending: true })
       if (error) throw error
-      return (data as ChildRow[]).map(mapRow)
+      return (data as unknown as ChildRow[]).map(mapRow)
     },
   })
 
   useEffect(() => {
+    if (!churchId) return
     const channel = supabase
-      .channel(`children-${CHURCH_ID}-${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: `church_id=eq.${CHURCH_ID}` },
-        () => queryClient.invalidateQueries({ queryKey: ['children', CHURCH_ID] }))
+      .channel(`children-${churchId}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: `church_id=eq.${churchId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['children', churchId] }))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guardians' },
-        () => queryClient.invalidateQueries({ queryKey: ['children', CHURCH_ID] }))
+        () => queryClient.invalidateQueries({ queryKey: ['children', churchId] }))
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [queryClient])
+  }, [queryClient, churchId])
 
   async function addChild(
     child: Omit<Child, 'id' | 'guardians' | 'status' | 'checkedInAt'>,
     guardians: Omit<Guardian, 'id'>[]
   ) {
+    if (!churchId) throw new Error('Sessão expirada')
     const { data, error } = await supabase
       .from('children')
       .insert({
-        church_id: CHURCH_ID,
+        church_id: churchId,
         name: child.name,
         birth_date: child.birthDate,
         room_id: child.roomId,
@@ -89,7 +94,7 @@ export function useChildren() {
       await supabase
         .from('bracelets')
         .update({ status: 'in-use', guardian_name: guardians[0]?.name || null, child_id: data.id })
-        .eq('church_id', CHURCH_ID)
+        .eq('church_id', churchId)
         .eq('number', child.braceletNumber)
     }
 
@@ -108,14 +113,15 @@ export function useChildren() {
     if (error) throw error
 
     // Atualiza o cache local imediatamente — não espera o ciclo realtime (lento no mobile)
-    queryClient.setQueryData(['children', CHURCH_ID], (old: Child[] = []) =>
+    queryClient.setQueryData(['children', churchId], (old: Child[] = []) =>
       old.map((c) => (c.id === id ? { ...c, ...updates } : c))
     )
   }
 
   async function checkInChild(id: string, braceletNumber: string, roomId: string) {
+    if (!churchId) throw new Error('Sessão expirada')
     const dbUpdates = {
-      status: 'present',
+      status: 'present' as const,
       checked_in_at: new Date().toISOString(),
       bracelet_number: braceletNumber,
       room_id: roomId
@@ -128,7 +134,7 @@ export function useChildren() {
     await supabase
       .from('bracelets')
       .update({ status: 'in-use', guardian_name: guardianData?.[0]?.name || null, child_id: id })
-      .eq('church_id', CHURCH_ID)
+      .eq('church_id', churchId)
       .eq('number', braceletNumber)
   }
 

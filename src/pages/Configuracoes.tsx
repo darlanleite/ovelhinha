@@ -53,12 +53,6 @@ const Configuracoes = () => {
             <input value={churchName} onChange={(e) => setChurchName(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">URL do Backend (via VITE_BACKEND_URL)</label>
-            <input value={import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'} disabled
-              className="w-full px-4 py-3 rounded-lg border border-border bg-muted text-muted-foreground font-mono text-sm cursor-not-allowed opacity-60" />
-            <p className="text-xs text-muted-foreground mt-1">Configurado via variável de ambiente. Não editável aqui.</p>
-          </div>
           <button onClick={saveChurch} className="bg-primary text-primary-foreground font-heading font-bold text-sm px-6 py-2.5 rounded-lg hover:bg-primary-hover transition-colors">
             Salvar
           </button>

@@ -1,15 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, CHURCH_ID } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import type { ServiceHistory } from '@/store/types'
 
 export function useReports() {
+  const { churchId } = useAuth()
+
   const { data: history = [], isLoading: loading } = useQuery({
-    queryKey: ['service_history', CHURCH_ID],
+    queryKey: ['service_history', churchId],
+    enabled: !!churchId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('service_history')
         .select('*')
-        .eq('church_id', CHURCH_ID)
+        .eq('church_id', churchId!)
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error

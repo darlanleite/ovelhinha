@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Check, ChevronRight } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import PrintableLabel from '@/components/PrintableLabel';
+import type { Child } from '@/store/types';
 
 const steps = ['Criança', 'Responsável', 'Pulseira'];
 
@@ -18,7 +19,7 @@ const Cadastro = () => {
   const { bracelets } = useBracelets();
 
   const [mode, setMode] = useState<'new'|'existing'>('new');
-  const [selectedChild, setSelectedChild] = useState<any>(null);
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [createdChildId, setCreatedChildId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);

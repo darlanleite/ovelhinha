@@ -6,8 +6,11 @@ import { useChurch } from '@/hooks/useChurch';
 import { Users, Watch, AlertTriangle, BatteryLow, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { encerrarPulseira } from '@/lib/esp32';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Call } from '@/store/types';
 
 const Dashboard = () => {
+  const { churchId } = useAuth();
   const { children, updateChild } = useChildren();
   const { openCalls, answerCall } = useCalls();
   const { bracelets, stats, updateBracelet } = useBracelets();
@@ -72,7 +75,7 @@ const Dashboard = () => {
                   onAnswer={async () => {
                     await answerCall(call.id, 'reception');
                     const bracelet = child?.braceletNumber || call.braceletNumber;
-                    if (bracelet) encerrarPulseira(bracelet).catch(() => {});
+                    if (bracelet && churchId) encerrarPulseira(churchId, bracelet).catch(() => {});
                   }}
                 />
               );
@@ -127,7 +130,7 @@ const Dashboard = () => {
   );
 };
 
-const OpenCallCard = ({ call, childName, onAnswer }: { call: any; childName: string; onAnswer: () => void }) => {
+const OpenCallCard = ({ call, childName, onAnswer }: { call: Call; childName: string; onAnswer: () => void }) => {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const start = new Date(call.createdAt).getTime();

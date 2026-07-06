@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAppStore } from '@/store/useAppStore'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 const DEVICE_ID_KEY = 'ovelhinha-device-id'
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-const CHURCH_ID = import.meta.env.VITE_CHURCH_ID as string
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string
 
 function getOrCreateDeviceId(): string {
@@ -23,30 +21,30 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
-async function upsertSubscription(sub: PushSubscription, role: string, roomId: string | null) {
+async function upsertSubscription(
+  sub: PushSubscription,
+  churchId: string,
+  role: string,
+  roomId: string | null
+) {
   const deviceId = getOrCreateDeviceId()
-  await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Prefer': 'resolution=merge-duplicates,return=minimal',
-    },
-    body: JSON.stringify({
-      church_id: CHURCH_ID,
+  // A edge function espera role 'reception' ou 'tia' (admin recebe como recepção)
+  const pushRole = role === 'tia' ? 'tia' : 'reception'
+  await supabase.from('push_subscriptions').upsert(
+    {
+      church_id: churchId,
       device_id: deviceId,
-      role,
+      role: pushRole,
       room_id: roomId || null,
-      subscription: sub.toJSON(),
+      subscription: sub.toJSON() as never,
       updated_at: new Date().toISOString(),
-    }),
-  })
+    },
+    { onConflict: 'device_id' }
+  )
 }
 
 export function usePushNotifications() {
-  const userRole = useAppStore((s) => s.userRole)
-  const tiaRoom = useAppStore((s) => s.tiaRoom)
+  const { role, churchId, tiaRoom } = useAuth()
 
   const isSupported = typeof window !== 'undefined'
     && 'serviceWorker' in navigator
@@ -59,18 +57,18 @@ export function usePushNotifications() {
 
   // Re-inscreve quando a sala da tia muda (garante room_id atualizado)
   useEffect(() => {
-    if (!isSupported || !userRole || permission !== 'granted') return
+    if (!isSupported || !role || !churchId || permission !== 'granted') return
     navigator.serviceWorker.ready.then(async (reg) => {
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
-        await upsertSubscription(sub, userRole, tiaRoom)
+        await upsertSubscription(sub, churchId, role, tiaRoom)
         setIsSubscribed(true)
       }
     })
-  }, [userRole, tiaRoom, permission, isSupported])
+  }, [role, churchId, tiaRoom, permission, isSupported])
 
   const subscribe = useCallback(async () => {
-    if (!isSupported || !userRole) return
+    if (!isSupported || !role || !churchId) return
     try {
       const perm = await Notification.requestPermission()
       setPermission(perm)
@@ -84,12 +82,12 @@ export function usePushNotifications() {
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         })
       }
-      await upsertSubscription(sub, userRole, tiaRoom)
+      await upsertSubscription(sub, churchId, role, tiaRoom)
       setIsSubscribed(true)
     } catch (err) {
       console.error('[Push] Erro ao ativar notificações:', err)
     }
-  }, [isSupported, userRole, tiaRoom])
+  }, [isSupported, role, churchId, tiaRoom])
 
   return { isSupported, permission, isSubscribed, subscribe }
 }

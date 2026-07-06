@@ -4,9 +4,11 @@ import { useCalls } from '@/hooks/useCalls';
 import { useBracelets } from '@/hooks/useBracelets';
 import { useChurch } from '@/hooks/useChurch';
 import { braceletOfflineSince, braceletIsRisky } from '@/store/types';
+import type { Call } from '@/store/types';
 import { toast } from 'sonner';
 import { Search, Camera } from 'lucide-react';
 import { acionarPulseira, encerrarPulseira } from '@/lib/esp32';
+import { useAuth } from '@/contexts/AuthContext';
 
 const reasons = [
   { icon: '🚽', label: 'Banheiro' },
@@ -18,6 +20,7 @@ const reasons = [
 ];
 
 const Acionar = () => {
+  const { churchId } = useAuth();
   const { children, updateChild } = useChildren();
   const { rooms } = useChurch();
   const { calls, addCall, answerCall, reactivateCall } = useCalls();
@@ -68,7 +71,7 @@ const Acionar = () => {
       await updateChild(child.id, { status: 'called' });
       setActiveCallId(callId);
       toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
-      acionarPulseira(child.braceletNumber || '??', reasons[selectedReason].label).catch(() => {});
+      if (churchId) acionarPulseira(churchId, child.braceletNumber || '??', reasons[selectedReason].label).catch(() => {});
     } catch {
       toast.error('Erro ao acionar pulseira');
     } finally {
@@ -80,7 +83,7 @@ const Acionar = () => {
     if (activeCallId && child) {
       await answerCall(activeCallId, 'reception', child.name);
       toast('Pai chegou! ✓ 🐑');
-      encerrarPulseira(child.braceletNumber || '??').catch(() => {});
+      if (churchId) encerrarPulseira(churchId, child.braceletNumber || '??').catch(() => {});
       setActiveCallId(null);
       setSelectedChild(null);
       setSelectedReason(null);
@@ -225,7 +228,7 @@ const Acionar = () => {
 };
 
 const WaitingScreen = ({ call, childName, onAnswered, onReactivate, onFallback }: {
-  call: any; childName: string; onAnswered: () => void; onReactivate: () => void; onFallback: (c: 'whatsapp' | 'microphone' | 'volunteer') => void;
+  call: Call; childName: string; onAnswered: () => void; onReactivate: () => void; onFallback: (c: 'whatsapp' | 'microphone' | 'volunteer') => void;
 }) => {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {

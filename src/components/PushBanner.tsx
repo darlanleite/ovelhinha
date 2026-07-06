@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
-import { useAppStore } from '@/store/useAppStore'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function PushBanner() {
-  const userRole = useAppStore((s) => s.userRole)
+  const userRole = useAuth().role
   const { isSupported, permission, isSubscribed, subscribe } = usePushNotifications()
   const [dismissed, setDismissed] = useState(false)
   const [loading, setLoading] = useState(false)

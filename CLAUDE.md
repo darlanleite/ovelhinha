@@ -361,11 +361,14 @@ String url = SUPABASE_URL + "/rest/v1/gateway_commands?id=eq." + id + "&status=e
 String url = SUPABASE_URL + "/rest/v1/gateway_commands?id=eq." + id;
 ```
 
-**ATENÇÃO — `pollCommands()` marca 'sent' prematuramente:**
-O firmware atual chama `patchCommandStatus(id, "sent")` DENTRO de `pollCommands()`, antes do BLE. Isso era intencional (evitar re-entrega no reset), mas impede broadcast real: o primeiro gateway a fazer poll "rouba" o comando dos outros. Para multi-gateway funcionar corretamente, esta chamada deve ser removida de `pollCommands()` — o status só deve mudar após a tentativa BLE (em `tickBLE()`).
+**✅ RESOLVIDO no gateway_v2 (2026-07):** `pollCommands()` NÃO marca mais 'sent' ao
+enfileirar — o status só muda após a tentativa BLE (`tickBLE()` → `patchCommandStatus()`),
+e `patchCommandStatus()` usa o claim atômico (`&status=eq.pending`). O histórico do
+problema: a versão antiga marcava 'sent' dentro do poll, o que fazia o primeiro gateway
+"roubar" o comando dos outros e impedia broadcast real.
 
-**O que NÃO mudar ao adicionar multi-gateway:**
-`doConnectAndSend()`, `tickBLE()`, `GatewayScanCallbacks`, `processQueue()`, `startBLEExec()`, `pollCommands()` (exceto remover o patchCommandStatus prematuro), WiFi.setSleep(false), NimBLE setup — toda a lógica BLE fica intocada. A única mudança é `patchCommandStatus()` e remover o claim antecipado do poll.
+**O que NÃO mudar (lógica BLE estável):**
+`doConnectAndSend()`, `tickBLE()`, `GatewayScanCallbacks`, `processQueue()`, `startBLEExec()`, `pollCommands()`, WiFi.setSleep(false), NimBLE setup.
 
 ---
 

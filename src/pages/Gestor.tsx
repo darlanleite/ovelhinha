@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 import { useChildren } from '@/hooks/useChildren';
 import { useCalls } from '@/hooks/useCalls';
 import { useBracelets } from '@/hooks/useBracelets';
@@ -22,6 +24,7 @@ const reasons = [
 // ─── Chamadas tab ─────────────────────────────────────────────────────────────
 
 function CallsTab() {
+  const { churchId } = useAuth();
   const { children } = useChildren();
   const { openCalls, answerCall } = useCalls();
   const { rooms } = useChurch();
@@ -52,11 +55,16 @@ function CallsTab() {
           answering={answering === call.id}
           onAnswer={async () => {
             setAnswering(call.id);
-            const child = children.find((c) => c.id === call.childId);
-            await answerCall(call.id, 'reception', child?.name);
-            encerrarPulseira(call.braceletNumber).catch(() => {});
-            toast('Pai chegou! ✓ 🐑');
-            setAnswering(null);
+            try {
+              const child = children.find((c) => c.id === call.childId);
+              await answerCall(call.id, 'reception', child?.name);
+              if (churchId) encerrarPulseira(churchId, call.braceletNumber).catch(() => {});
+              toast('Pai chegou! ✓ 🐑');
+            } catch {
+              toast.error('Erro ao responder chamada');
+            } finally {
+              setAnswering(null);
+            }
           }}
         />
       ))}
@@ -109,6 +117,7 @@ function CallCard({ call, childName, roomLabel, answering, onAnswer }: {
 // ─── Acionar tab ──────────────────────────────────────────────────────────────
 
 function AcionarTab() {
+  const { churchId } = useAuth();
   const { children, updateChild } = useChildren();
   const { calls, addCall } = useCalls();
   const { rooms } = useChurch();
@@ -146,7 +155,7 @@ function AcionarTab() {
         reasonIcon: reasons[reasonIdx].icon,
       });
       await updateChild(child.id, { status: 'called' });
-      acionarPulseira(child.braceletNumber || '??', reasons[reasonIdx].label).catch(() => {});
+      if (churchId) acionarPulseira(churchId, child.braceletNumber || '??', reasons[reasonIdx].label).catch(() => {});
       toast(`Pulseira #${child.braceletNumber || '??'} acionada! 🐑`);
       setSelectedId(null);
       setQuery('');
@@ -333,62 +342,16 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
-// ─── PIN gate (auth independente do Zustand) ──────────────────────────────────
-
-const GESTOR_KEY = 'ovelhinha-gestor'
-const GESTOR_PIN = '1234'
-
-function GestorPin({ onAuth }: { onAuth: () => void }) {
-  const [pin, setPin] = useState('')
-  const [error, setError] = useState(false)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (pin === GESTOR_PIN) {
-      localStorage.setItem(GESTOR_KEY, '1')
-      onAuth()
-    } else {
-      setError(true)
-      setPin('')
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
-      <div className="w-full max-w-xs animate-fade-in">
-        <div className="flex justify-center mb-6">
-          <OvelhinhaLogo size={64} />
-        </div>
-        <form onSubmit={handleSubmit} className="bg-card rounded-card border border-border p-6 shadow-soft space-y-4">
-          <h2 className="font-heading font-extrabold text-lg text-foreground text-center">Gestor</h2>
-          <input
-            type="password"
-            value={pin}
-            onChange={(e) => { setPin(e.target.value); setError(false) }}
-            placeholder="Senha"
-            autoFocus
-            className={`w-full px-4 py-3 rounded-lg border text-center text-xl tracking-widest font-mono bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all ${error ? 'border-urgent' : 'border-border focus:border-primary'}`}
-          />
-          {error && <p className="text-xs text-urgent text-center">Senha incorreta</p>}
-          <button type="submit" className="w-full bg-primary text-primary-foreground font-heading font-extrabold py-3 rounded-lg hover:opacity-90 transition-opacity">
-            Entrar
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// Acesso protegido por ProtectedRoute require="staff" em App.tsx
 
 type Tab = 'calls' | 'acionar' | 'status';
 
 const Gestor = () => {
-  const [authed, setAuthed] = useState(() => localStorage.getItem(GESTOR_KEY) === '1')
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { openCalls } = useCalls();
   const [tab, setTab] = useState<Tab>('calls');
-
-  if (!authed) return <GestorPin onAuth={() => setAuthed(true)} />
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'calls', label: 'Chamadas', icon: '🔔' },
@@ -407,7 +370,7 @@ const Gestor = () => {
           </span>
         )}
         <button
-          onClick={() => { localStorage.removeItem(GESTOR_KEY); setAuthed(false) }}
+          onClick={async () => { await signOut(); navigate('/'); }}
           className="ml-auto text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1"
         >
           <LogOut className="w-4 h-4" />

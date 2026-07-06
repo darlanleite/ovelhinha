@@ -1,0 +1,21 @@
+#pragma once
+
+// ============================================================
+// Copie este arquivo para config.h e preencha os valores.
+// config.h está no .gitignore — NUNCA commite credenciais.
+// ============================================================
+
+// WiFi
+#define WIFI_SSID         "SUA_REDE"
+#define WIFI_PASSWORD     "SUA_SENHA"
+
+// Supabase
+#define SUPABASE_URL      "https://SEU-PROJETO.supabase.co"
+#define SUPABASE_KEY      "SUA_ANON_KEY"
+#define CHURCH_ID         "UUID_DA_IGREJA"
+
+// Identidade deste gateway
+// UUID obtido após primeiro boot (Serial imprime) ou via SQL:
+//   INSERT INTO gateways(church_id,name) VALUES('...','Gateway-01') RETURNING id;
+#define GATEWAY_NAME      "Gateway-01"
+#define GATEWAY_ID        "UUID_DO_GATEWAY"

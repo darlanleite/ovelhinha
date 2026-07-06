@@ -2,10 +2,22 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.1";
 import webpush from "npm:web-push@3.6.7";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Origens permitidas: configure ALLOWED_ORIGINS (separadas por vírgula) nos
+// secrets da função. Localhost é liberado para desenvolvimento.
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'https://ovelhinha-olive.vercel.app')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost');
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 // ─── Helpers base64url ────────────────────────────────────────────────────────
 function b64urlToBytes(b64: string): Uint8Array {
@@ -171,12 +183,14 @@ async function sendApplePush(
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!.trim();
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')!.trim();
@@ -186,10 +200,42 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { church_id, type, child_name, bracelet_number, reason, room_id } = await req.json();
+    // ── Autenticação: exige usuário logado (staff ou tia), não basta a anon key ──
+    const authHeader = req.headers.get('Authorization') || '';
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await supabaseAuth.auth.getUser();
+    const user = userData?.user;
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401,
+      });
+    }
 
-    if (!church_id || !type) {
-      return new Response(JSON.stringify({ error: 'Missing church_id or type' }), {
+    // ── Igreja derivada da identidade do chamador (não confia no body) ──
+    let church_id: string | null = null;
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('church_id').eq('user_id', user.id).maybeSingle();
+    if (profile) {
+      church_id = profile.church_id;
+    } else {
+      const { data: tia } = await supabaseAdmin
+        .from('tia_sessions').select('church_id, expires_at').eq('user_id', user.id).maybeSingle();
+      if (tia && new Date(tia.expires_at).getTime() > Date.now()) {
+        church_id = tia.church_id;
+      }
+    }
+    if (!church_id) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+      });
+    }
+
+    const { type, child_name, bracelet_number, reason, room_id } = await req.json();
+
+    if (!type) {
+      return new Response(JSON.stringify({ error: 'Missing type' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
       });
     }

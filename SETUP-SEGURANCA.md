@@ -6,10 +6,16 @@
 
 ## Pré-requisito
 
-- [ ] **[D]** Liberar slot free no Supabase: a conta `projetos.eon@gmail.com` está no
-  limite de 2 projetos ativos. Pause/delete um projeto que não usa (samu-app e kinesia
-  já estão inativos; verifique se `solargest` pode ser pausado) OU faça upgrade.
-  Depois restaure o projeto **ovelhinha** no dashboard.
+> **Decisão (2026-07-06):** seguir no plano FREE por enquanto (sem custo).
+> Atenção: projeto free pausa sozinho após ~1 semana sem uso — antes do piloto
+> com igreja real, migrar para org Pro dedicada (~US$25/mês), custo a embutir
+> no preço do piloto.
+
+- [ ] **[D]** Liberar slot free: o usuário `projetos.eon@gmail.com` está no limite
+  de 2 projetos free ativos. O `solargest` (em uso) é um; o segundo está em OUTRA
+  organização — no dashboard, troque de org no seletor do canto superior esquerdo,
+  ache o projeto ativo e pause (Settings → General → Pause project).
+  Depois restaure o projeto **ovelhinha** na org `projetos.eon`.
 
 ## Ativação (com o banco de volta)
 

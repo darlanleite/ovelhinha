@@ -16,10 +16,13 @@
 - [x] **[C]** ~~Remover dicas de senha/código da tela de login (`Login.tsx`) e senha hardcoded `1234`~~ ✅ (incluindo o PIN 1234 do Gestor)
 - [x] **[C]** ~~Restringir CORS da edge function `notify-call` (hoje é `*`)~~ ✅ + agora exige JWT de usuário logado
 - [x] **[C]** ~~Remover `.env` e `config.h` do versionamento + adicionar ao `.gitignore`~~ ✅ (`.env` nunca foi commitado; `config.h` removido — mas segue no histórico antigo, por isso a rotação [D] é obrigatória)
-- [ ] **[D]** ⚠️ URGENTE: rotacionar a anon key no dashboard do Supabase e trocar a senha do Wi-Fi de casa — **o repo GitHub é PÚBLICO** e ambas estão no histórico
-- [ ] **[D]** Liberar slot free no Supabase (conta no limite de 2 projetos ativos; o projeto ovelhinha está PAUSADO) e restaurar o projeto
-- [ ] **[D]** Habilitar "Anonymous sign-ins" no dashboard (Authentication → Sign In / Up) — necessário para o login da tia
-- [ ] **[C]** Aplicar migração + criar profile do admin + redesployar edge function + regenerar types (assim que o banco voltar — passos no `SETUP-SEGURANCA.md`)
+- [x] **[D]** ~~Liberar acesso ao banco~~ ✅ 2026-07-06: projeto NOVO na conta darlanleite50 (org "ovelhinha", ref `gxdmwpebrrjmqqkekzwu`) — chave antiga vazada aponta para projeto pausado/morto
+- [x] **[D]** ~~Habilitar "Anonymous sign-ins"~~ ✅
+- [x] **[C]** ~~Aplicar migrações + admin + edge function + types~~ ✅ 5 migrações aplicadas, admin criado (senha em `.admin-senha-inicial.txt` — salve e apague o arquivo), notify-call deployada com VAPID novo, types regenerados. **Testado no navegador: login recepção ✓, login tia ✓, anon bloqueado ✓**
+- [ ] **[D]** Trocar a senha do Wi-Fi de casa — segue exposta no histórico público do GitHub
+- [ ] **[D]** Atualizar env no Vercel (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` novas, remover `VITE_CHURCH_ID`/`VITE_BACKEND_URL`, adicionar `VITE_VAPID_PUBLIC_KEY` nova — valores no `.env` local)
+- [ ] **[C+D]** Push para main → deploy (fazer DEPOIS do env do Vercel; Claude faz o push quando você confirmar)
+- [ ] **[C+D]** Atualizar URL/key no `gateway_v2.ino` (Claude edita) + regravar gateways via USB (você) + redigitar esp_ids das pulseiras em Configurações
 
 ### P0 — LGPD (dados de crianças)
 

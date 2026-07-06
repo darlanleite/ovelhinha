@@ -60,7 +60,8 @@ export function useBracelets() {
   useEffect(() => {
     if (!churchId) return
     const channel = supabase
-      .channel(`bracelets-${churchId}-${Date.now()}`)
+      // randomUUID: Date.now() colidia quando 2 componentes montavam no mesmo ms
+      .channel(`bracelets-${churchId}-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bracelets', filter: `church_id=eq.${churchId}` },
         () => queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] }))
       .subscribe()

@@ -58,7 +58,8 @@ export function useCalls() {
   useEffect(() => {
     if (!churchId) return
     const channel = supabase
-      .channel(`calls-${churchId}-${Date.now()}`)
+      // randomUUID: Date.now() colidia quando 2 componentes montavam no mesmo ms
+      .channel(`calls-${churchId}-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calls', filter: `church_id=eq.${churchId}` },
         () => queryClient.invalidateQueries({ queryKey: ['calls', churchId] }))
       .subscribe()

@@ -98,8 +98,11 @@ GRANT INSERT, UPDATE, DELETE ON children, guardians, calls, bracelets, rooms, ch
 ```
 
 ### Realtime
-Cada hook usa canal com nome único por instância (`${tabela}-${CHURCH_ID}-${Date.now()}`)
+Cada hook usa canal com nome único por instância (`${tabela}-${churchId}-${crypto.randomUUID()}`)
 para evitar conflito quando o mesmo hook é montado em múltiplos componentes simultaneamente.
+**Não usar `Date.now()`:** dois componentes montando no mesmo milissegundo geram o mesmo
+nome → supabase-js devolve o MESMO canal já subscrito → exceção
+"cannot add postgres_changes callbacks after subscribe()" → tela branca.
 
 ---
 

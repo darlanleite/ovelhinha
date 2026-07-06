@@ -53,7 +53,8 @@ export function useChildren() {
   useEffect(() => {
     if (!churchId) return
     const channel = supabase
-      .channel(`children-${churchId}-${Date.now()}`)
+      // randomUUID: Date.now() colidia quando 2 componentes montavam no mesmo ms
+      .channel(`children-${churchId}-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: `church_id=eq.${churchId}` },
         () => queryClient.invalidateQueries({ queryKey: ['children', churchId] }))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guardians' },

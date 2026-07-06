@@ -1,27 +1,182 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-// Tipos mantidos à mão a partir do schema documentado (CLAUDE.md + migrações).
-// Quando o projeto Supabase estiver acessível, regenerar com:
-//   npx supabase gen types typescript --project-id reefzadzwbmhkojtjqhz > src/lib/database.types.ts
-
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
-      churches: {
+      bracelets: {
         Row: {
-          id: string
-          name: string
-          slug: string
+          battery: number
+          child_id: string | null
+          church_id: string
           created_at: string
+          esp_id: string | null
+          guardian_name: string | null
+          id: string
+          last_gateway_id: string | null
+          last_seen_at: string | null
+          number: string
+          status: string
         }
         Insert: {
-          id?: string
-          name: string
-          slug: string
+          battery?: number
+          child_id?: string | null
+          church_id: string
           created_at?: string
+          esp_id?: string | null
+          guardian_name?: string | null
+          id?: string
+          last_gateway_id?: string | null
+          last_seen_at?: string | null
+          number: string
+          status?: string
         }
-        Update: Partial<Database['public']['Tables']['churches']['Insert']>
-        Relationships: []
+        Update: {
+          battery?: number
+          child_id?: string | null
+          church_id?: string
+          created_at?: string
+          esp_id?: string | null
+          guardian_name?: string | null
+          id?: string
+          last_gateway_id?: string | null
+          last_seen_at?: string | null
+          number?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracelets_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracelets_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calls: {
+        Row: {
+          answered_at: string | null
+          answered_by: string | null
+          bracelet_number: string
+          child_id: string
+          church_id: string
+          created_at: string
+          id: string
+          reason: string
+          reason_icon: string
+          room_id: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          answered_by?: string | null
+          bracelet_number: string
+          child_id: string
+          church_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          reason_icon?: string
+          room_id: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          answered_by?: string | null
+          bracelet_number?: string
+          child_id?: string
+          church_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reason_icon?: string
+          room_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      children: {
+        Row: {
+          authorized_pickup: string | null
+          birth_date: string
+          bracelet_number: string | null
+          checked_in_at: string
+          church_id: string
+          created_at: string
+          id: string
+          medical_notes: string | null
+          name: string
+          room_id: string
+          status: string
+        }
+        Insert: {
+          authorized_pickup?: string | null
+          birth_date: string
+          bracelet_number?: string | null
+          checked_in_at?: string
+          church_id: string
+          created_at?: string
+          id?: string
+          medical_notes?: string | null
+          name: string
+          room_id: string
+          status?: string
+        }
+        Update: {
+          authorized_pickup?: string | null
+          birth_date?: string
+          bracelet_number?: string | null
+          checked_in_at?: string
+          church_id?: string
+          created_at?: string
+          id?: string
+          medical_notes?: string | null
+          name?: string
+          room_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "children_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       church_settings: {
         Row: {
@@ -34,282 +189,513 @@ export interface Database {
           daily_code?: string
           reactivate_minutes?: number
         }
-        Update: Partial<Database['public']['Tables']['church_settings']['Insert']>
-        Relationships: []
+        Update: {
+          church_id?: string
+          daily_code?: string
+          reactivate_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "church_settings_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: true
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      rooms: {
+      churches: {
         Row: {
-          id: string
-          church_id: string
-          name: string
-          emoji: string
-          age_range: string
           created_at: string
+          id: string
+          name: string
+          slug: string
         }
         Insert: {
+          created_at?: string
           id?: string
-          church_id: string
           name: string
-          emoji: string
-          age_range: string
+          slug: string
+        }
+        Update: {
           created_at?: string
-        }
-        Update: Partial<Database['public']['Tables']['rooms']['Insert']>
-        Relationships: []
-      }
-      children: {
-        Row: {
-          id: string
-          church_id: string
-          name: string
-          birth_date: string
-          room_id: string
-          medical_notes: string | null
-          bracelet_number: string | null
-          authorized_pickup: string | null
-          status: 'present' | 'called' | 'left'
-          checked_in_at: string
-          created_at: string
-        }
-        Insert: {
           id?: string
-          church_id: string
-          name: string
-          birth_date: string
-          room_id: string
-          medical_notes?: string | null
-          bracelet_number?: string | null
-          authorized_pickup?: string | null
-          status?: 'present' | 'called' | 'left'
-          checked_in_at?: string
-          created_at?: string
+          name?: string
+          slug?: string
         }
-        Update: Partial<Database['public']['Tables']['children']['Insert']>
-        Relationships: []
-      }
-      guardians: {
-        Row: {
-          id: string
-          child_id: string
-          name: string
-          phone: string
-          is_primary: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          child_id: string
-          name: string
-          phone: string
-          is_primary?: boolean
-          created_at?: string
-        }
-        Update: Partial<Database['public']['Tables']['guardians']['Insert']>
-        Relationships: []
-      }
-      bracelets: {
-        Row: {
-          id: string
-          church_id: string
-          number: string
-          esp_id: string | null
-          status: 'available' | 'in-use' | 'charging' | 'offline'
-          battery: number
-          guardian_name: string | null
-          child_id: string | null
-          last_seen_at: string | null
-          last_gateway_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          church_id: string
-          number: string
-          esp_id?: string | null
-          status?: 'available' | 'in-use' | 'charging' | 'offline'
-          battery?: number
-          guardian_name?: string | null
-          child_id?: string | null
-          last_seen_at?: string | null
-          last_gateway_id?: string | null
-          created_at?: string
-        }
-        Update: Partial<Database['public']['Tables']['bracelets']['Insert']>
-        Relationships: []
-      }
-      calls: {
-        Row: {
-          id: string
-          church_id: string
-          child_id: string
-          bracelet_number: string
-          room_id: string
-          reason: string
-          reason_icon: string
-          status: 'open' | 'answered' | 'reactivated'
-          answered_by: 'reception' | 'tia' | null
-          created_at: string
-          answered_at: string | null
-        }
-        Insert: {
-          id?: string
-          church_id: string
-          child_id: string
-          bracelet_number: string
-          room_id: string
-          reason: string
-          reason_icon: string
-          status?: 'open' | 'answered' | 'reactivated'
-          answered_by?: 'reception' | 'tia' | null
-          created_at?: string
-          answered_at?: string | null
-        }
-        Update: Partial<Database['public']['Tables']['calls']['Insert']>
-        Relationships: []
-      }
-      service_history: {
-        Row: {
-          id: string
-          church_id: string
-          service_date: string
-          service_name: string
-          children_count: number
-          calls_count: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          church_id: string
-          service_date: string
-          service_name: string
-          children_count: number
-          calls_count: number
-          created_at?: string
-        }
-        Update: Partial<Database['public']['Tables']['service_history']['Insert']>
         Relationships: []
       }
       gateway_commands: {
         Row: {
-          id: string
-          church_id: string
-          bracelet_id: string
-          command: 'acionar' | 'encerrar'
-          reason: string | null
-          status: 'pending' | 'sent' | 'failed'
           attempts: number
+          bracelet_id: string
+          church_id: string
+          command: string
           created_at: string
-          sent_at: string | null
-          gateway_id: string | null
           delivered_at: string | null
+          gateway_id: string | null
+          id: string
+          reason: string | null
+          sent_at: string | null
+          status: string
         }
         Insert: {
-          id?: string
-          church_id: string
-          bracelet_id: string
-          command: 'acionar' | 'encerrar'
-          reason?: string | null
-          status?: 'pending' | 'sent' | 'failed'
           attempts?: number
+          bracelet_id: string
+          church_id: string
+          command: string
           created_at?: string
-          sent_at?: string | null
-          gateway_id?: string | null
           delivered_at?: string | null
+          gateway_id?: string | null
+          id?: string
+          reason?: string | null
+          sent_at?: string | null
+          status?: string
         }
-        Update: Partial<Database['public']['Tables']['gateway_commands']['Insert']>
-        Relationships: []
+        Update: {
+          attempts?: number
+          bracelet_id?: string
+          church_id?: string
+          command?: string
+          created_at?: string
+          delivered_at?: string | null
+          gateway_id?: string | null
+          id?: string
+          reason?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateway_commands_bracelet_id_fkey"
+            columns: ["bracelet_id"]
+            isOneToOne: false
+            referencedRelation: "bracelets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_commands_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_commands_gateway_id_fkey"
+            columns: ["gateway_id"]
+            isOneToOne: false
+            referencedRelation: "gateways"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gateways: {
         Row: {
-          id: string
           church_id: string
-          name: string
+          id: string
           last_seen: string | null
+          name: string
         }
         Insert: {
-          id?: string
           church_id: string
-          name?: string
+          id?: string
           last_seen?: string | null
+          name?: string
         }
-        Update: Partial<Database['public']['Tables']['gateways']['Insert']>
-        Relationships: []
+        Update: {
+          church_id?: string
+          id?: string
+          last_seen?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateways_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guardians: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          name: string
+          phone: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name: string
+          phone: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          name?: string
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardians_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          church_id: string
+          created_at: string
+          name: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          name?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          name?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
-          id: string
           church_id: string
           device_id: string
+          id: string
           role: string
           room_id: string | null
           subscription: Json
           updated_at: string
         }
         Insert: {
-          id?: string
           church_id: string
           device_id: string
+          id?: string
           role: string
           room_id?: string | null
           subscription: Json
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['push_subscriptions']['Insert']>
-        Relationships: []
+        Update: {
+          church_id?: string
+          device_id?: string
+          id?: string
+          role?: string
+          room_id?: string | null
+          subscription?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      profiles: {
+      rooms: {
         Row: {
-          user_id: string
+          age_range: string
           church_id: string
-          role: 'admin' | 'reception'
-          name: string | null
           created_at: string
+          emoji: string
+          id: string
+          name: string
         }
         Insert: {
-          user_id: string
+          age_range?: string
           church_id: string
-          role: 'admin' | 'reception'
-          name?: string | null
           created_at?: string
+          emoji?: string
+          id?: string
+          name: string
         }
-        Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Update: {
+          age_range?: string
+          church_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_history: {
+        Row: {
+          calls_count: number
+          children_count: number
+          church_id: string
+          created_at: string
+          id: string
+          service_date: string
+          service_name: string
+        }
+        Insert: {
+          calls_count?: number
+          children_count?: number
+          church_id: string
+          created_at?: string
+          id?: string
+          service_date: string
+          service_name?: string
+        }
+        Update: {
+          calls_count?: number
+          children_count?: number
+          church_id?: string
+          created_at?: string
+          id?: string
+          service_date?: string
+          service_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_history_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tia_claim_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: never
+          user_id?: string
+        }
         Relationships: []
       }
       tia_sessions: {
         Row: {
-          user_id: string
           church_id: string
-          room_id: string | null
           created_at: string
           expires_at: string
+          room_id: string | null
+          user_id: string
         }
         Insert: {
-          user_id: string
           church_id: string
-          room_id?: string | null
           created_at?: string
           expires_at: string
+          room_id?: string | null
+          user_id: string
         }
-        Update: Partial<Database['public']['Tables']['tia_sessions']['Insert']>
-        Relationships: []
+        Update: {
+          church_id?: string
+          created_at?: string
+          expires_at?: string
+          room_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tia_sessions_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tia_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       answer_call: {
-        Args: { p_call_id: string; p_answered_by: string }
+        Args: { p_answered_by: string; p_call_id: string }
         Returns: undefined
       }
-      tia_claim: {
-        Args: { p_code: string }
-        Returns: Json
-      }
-      tia_set_room: {
-        Args: { p_room_id: string }
-        Returns: undefined
-      }
+      current_church_id: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
+      is_staff: { Args: never; Returns: boolean }
+      tia_claim: { Args: { p_code: string }; Returns: Json }
+      tia_set_room: { Args: { p_room_id: string }; Returns: undefined }
     }
-    Enums: Record<string, never>
-    Views: Record<string, never>
-    CompositeTypes: Record<string, never>
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

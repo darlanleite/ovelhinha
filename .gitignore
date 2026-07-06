@@ -27,6 +27,7 @@ dist-ssr
 # Segredos — nunca commitar
 .env
 .env.*
+.admin-senha-inicial.txt
 firmware/gateway-esp32/config.h
 firmware/gateway-esp32-b/config.h
 

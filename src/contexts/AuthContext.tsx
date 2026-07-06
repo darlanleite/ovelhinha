@@ -46,7 +46,8 @@ async function fetchIdentity(session: Session | null): Promise<Identity> {
     .maybeSingle()
 
   if (profile) {
-    return { role: profile.role, churchId: profile.church_id, tiaRoom: null }
+    // O CHECK do banco garante 'admin' | 'reception'; o tipo gerado é string
+    return { role: profile.role as UserRole, churchId: profile.church_id, tiaRoom: null }
   }
 
   const { data: tia } = await supabase

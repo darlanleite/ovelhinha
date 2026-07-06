@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { acionarPulseira } from '@/lib/esp32'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Call } from '@/store/types'
 
 const CHECK_INTERVAL_MS = 30_000 // verifica a cada 30s
@@ -9,6 +10,7 @@ export function useAutoReactivate(
   reactivateMinutes: number,
   reactivateCall: (callId: string) => Promise<void>
 ) {
+  const { churchId } = useAuth()
   // Guarda IDs que já foram reacionados automaticamente nesta sessão
   // para não reacionar múltiplas vezes seguidas
   const reactivatedRef = useRef<Set<string>>(new Set())
@@ -28,7 +30,7 @@ export function useAutoReactivate(
 
           try {
             await reactivateCall(call.id)
-            await acionarPulseira(call.braceletNumber ?? '', call.reason)
+            if (churchId) await acionarPulseira(churchId, call.braceletNumber ?? '', call.reason)
           } catch (e) {
             console.error('[AutoReactivate] Erro ao reacionar:', e)
             // Remove do set para tentar novamente no próximo ciclo
@@ -49,5 +51,5 @@ export function useAutoReactivate(
     check()
     const interval = setInterval(check, CHECK_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [openCalls, reactivateMinutes, reactivateCall])
+  }, [openCalls, reactivateMinutes, reactivateCall, churchId])
 }

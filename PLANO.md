@@ -11,12 +11,15 @@
 
 ### P0 — Segurança (bloqueadores)
 
-- [ ] **[C]** Supabase Auth real — conta por igreja, papéis (admin / recepção / tia), login com e-mail+senha, código do dia validado no servidor
-- [ ] **[C]** RLS de verdade — políticas por `church_id` extraído do JWT, remover `USING (true)` e GRANTs abertos para `anon`
-- [ ] **[C]** Remover dicas de senha/código da tela de login (`Login.tsx`) e senha hardcoded `1234`
-- [ ] **[C]** Restringir CORS da edge function `notify-call` (hoje é `*`)
-- [ ] **[C]** Remover `.env` e `config.h` do histórico do git + adicionar ao `.gitignore`
-- [ ] **[D]** Rotacionar chaves no dashboard do Supabase (anon key exposta) e trocar a senha do Wi-Fi de casa (está commitada em `firmware/gateway-esp32/config.h`)
+- [x] **[C]** ~~Supabase Auth real — conta por igreja, papéis (admin / recepção / tia), login com e-mail+senha, código do dia validado no servidor~~ ✅ 2026-07-06 (código pronto; ativação depende dos itens [D] abaixo — ver `SETUP-SEGURANCA.md`)
+- [x] **[C]** ~~RLS de verdade — políticas por `church_id` extraído do JWT, remover `USING (true)` e GRANTs abertos para `anon`~~ ✅ migração `20260706_auth_and_rls.sql` escrita (aplicar quando o banco voltar)
+- [x] **[C]** ~~Remover dicas de senha/código da tela de login (`Login.tsx`) e senha hardcoded `1234`~~ ✅ (incluindo o PIN 1234 do Gestor)
+- [x] **[C]** ~~Restringir CORS da edge function `notify-call` (hoje é `*`)~~ ✅ + agora exige JWT de usuário logado
+- [x] **[C]** ~~Remover `.env` e `config.h` do versionamento + adicionar ao `.gitignore`~~ ✅ (`.env` nunca foi commitado; `config.h` removido — mas segue no histórico antigo, por isso a rotação [D] é obrigatória)
+- [ ] **[D]** ⚠️ URGENTE: rotacionar a anon key no dashboard do Supabase e trocar a senha do Wi-Fi de casa — **o repo GitHub é PÚBLICO** e ambas estão no histórico
+- [ ] **[D]** Liberar slot free no Supabase (conta no limite de 2 projetos ativos; o projeto ovelhinha está PAUSADO) e restaurar o projeto
+- [ ] **[D]** Habilitar "Anonymous sign-ins" no dashboard (Authentication → Sign In / Up) — necessário para o login da tia
+- [ ] **[C]** Aplicar migração + criar profile do admin + redesployar edge function + regenerar types (assim que o banco voltar — passos no `SETUP-SEGURANCA.md`)
 
 ### P0 — LGPD (dados de crianças)
 
@@ -34,11 +37,11 @@
 
 ### P1 — Qualidade e dívida técnica
 
-- [ ] **[C]** Corrigir bug multi-gateway — remover `patchCommandStatus(id, "sent")` prematuro do `pollCommands()` (já documentado no CLAUDE.md)
-- [ ] **[C]** Remover código legado — `server/index.js`, `server/gateway.js`, `useStore`, `mockData`, `SyncBridge` (Supabase é o único caminho de sync)
-- [ ] **[C]** Testes E2E (Playwright) dos 3 fluxos críticos: cadastro→check-in, acionar→pai chegou, novo culto
-- [ ] **[C]** Testes unitários dos hooks (useCalls, useChildren, useBracelets)
-- [ ] **[C]** Higiene do repo — README real, renomear `package.json` (está `vite_react_shadcn_ts`), remover `dist/` do versionamento
+- [x] **[C]** ~~Corrigir bug multi-gateway — claim prematuro no `pollCommands()`~~ ✅ já estava corrigido no gateway_v2 (WIP preservado); CLAUDE.md atualizado. Falta validar com 2 gateways físicos [C+D]
+- [x] **[C]** ~~Remover código legado — `server/index.js`, `server/gateway.js`, `useStore`, `mockData`, `SyncBridge`~~ ✅ + syncClient, useHeartbeatSimulator, useAppStore, start.sh, Ovelhinha.command
+- [x] **[C]** ~~Testes E2E (Playwright) dos 3 fluxos críticos~~ ✅ esqueleto criado (`tests/e2e/`) — ativa com E2E_EMAIL/E2E_PASSWORD quando o banco voltar
+- [x] **[C]** ~~Testes unitários dos hooks~~ ✅ conectividade pulseira/gateway (9 testes); mais cobertura virá com o banco ativo
+- [x] **[C]** ~~Higiene do repo — README real, renomear `package.json`, remover `dist/`~~ ✅ + script `npm run typecheck` novo (0 erros; o build nunca tinha sido typecheckado)
 
 ### P2 — Multi-tenancy e escala
 

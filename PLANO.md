@@ -23,21 +23,22 @@
 - [x] **[D]** ~~Atualizar env no Vercel~~ ✅ 2026-07-07
 - [x] **[C+D]** ~~Push para main → deploy~~ ✅ **PRODUÇÃO NO AR: https://ovelhinha.vercel.app** (banco novo verificado no bundle). Havia 3 projetos Vercel duplicados; o oficial é "ovelhinha" no time darlan's projects
 - [ ] **[D]** Deletar os 2 projetos Vercel duplicados (no outro escopo: "ovelhinha" com domínio -olive e "ovelhinha-kids-church-system") — servem código antigo e confundem
-- [ ] **[C+D]** Atualizar URL/key no `gateway_v2.ino` (Claude edita) + regravar gateways via USB (você) + redigitar esp_ids das pulseiras em Configurações
+- [ ] **[C+D]** ~~Atualizar URL/key no `gateway_v2.ino`~~ ✅ firmware pronto — **falta só: regravar gateway(s) via USB (você) + redigitar esp_ids das pulseiras em Configurações**
 
 ### P0 — LGPD (dados de crianças)
 
 - [x] **[C]** ~~Consentimento dos pais no fluxo de cadastro~~ ✅ 2026-07-07: checkbox obrigatório (novo e recorrente antigo), timestamp + nome do responsável, evento de auditoria
 - [x] **[C]** ~~Política de retenção~~ ✅ pg_cron mensal: notas médicas anonimizadas 90 dias após saída; cadastro inativo apagado após 365 dias; limpeza de sessões/comandos/auditoria antiga
-- [ ] **[C]** Rascunho de Política de Privacidade e Termos de Uso (para o advogado revisar)
+- [x] **[C]** ~~Rascunho de Política de Privacidade e Termos de Uso~~ ✅ 2026-07-07 em `docs/legal/` — pontos de decisão jurídica marcados com ⚖️
+- [ ] **[D]** Enviar os rascunhos de `docs/legal/` para revisão do advogado
 - [ ] **[D]** Revisão jurídica dos termos (advogado — ver seção Negócio)
 
 ### P1 — Funcionalidades que fecham a promessa do produto
 
 - [x] **[C]** ~~Check-out verificado por pulseira~~ ✅ 2026-07-07: RPC `checkout_child` confere o par no servidor (tia e recepção), tentativa errada vira evento de segurança, e a tela não mostra mais o número esperado (vazava a resposta)
 - [x] **[C]** ~~Log de auditoria imutável~~ ✅ `audit_events` via triggers no banco (não burlável pelo app), sem PII, visível em Relatórios
-- [ ] **[C]** Autorização de terceiros para retirada (item 5.2)
-- [ ] **[C]** Alerta proativo de gateway offline (heartbeat já existe — falta o alarme na UI + push)
+- [x] **[C]** ~~Autorização de terceiros para retirada (item 5.2)~~ ✅ 2026-07-07: fluxo de exceção no Dashboard (só staff), mostra responsáveis/autorizado, auditado com quem retirou e motivo
+- [x] **[C]** ~~Alerta proativo de gateway offline~~ ✅ vigia no banco (pg_cron 1 min) → push para recepção + banner vermelho na recepção e na tia + evento de auditoria
 
 ### P1 — Qualidade e dívida técnica
 

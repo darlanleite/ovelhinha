@@ -55,7 +55,7 @@
 - [ ] **[C]** Painel super-admin (suas métricas: igrejas ativas, gateways online, uso)
 - [ ] **[C]** Multi-filial (item 6.2) — uma conta, N campi
 - [ ] **[C]** Modo degradado offline — recepção opera local se a internet cair, sincroniza depois
-- [ ] **[C]** Notificação WhatsApp (item 6.1) — via API oficial Meta ou gateway tipo Z-API
+- [ ] **[C]** Notificação WhatsApp (item 6.1) — ✅ nível 1 feito (2026-07-07): click-to-chat wa.me para cobrar devolução de pulseira extraviada, sem API/custo. Falta nível 2: envio automático via API oficial da Meta (fase do piloto — templates aprovados, ~R$0,04-0,08/msg)
 - [ ] **[C]** Staging separado de produção (segundo projeto Supabase + preview deploy)
 - [ ] **[C]** Landing page comercial (o domínio hoje aponta direto pro app)
 

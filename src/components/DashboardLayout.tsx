@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChurch } from '@/hooks/useChurch';
 import { useCalls } from '@/hooks/useCalls';
 import { useAutoReactivate } from '@/hooks/useAutoReactivate';
+import { GatewayAlertBanner } from '@/components/GatewayAlertBanner';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
 
 const navItems = [
@@ -88,6 +89,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <span className="text-primary-foreground/80 text-sm font-body">{settings.churchName}</span>
           </div>
         </header>
+
+        <GatewayAlertBanner />
 
         <main className="flex-1 overflow-auto p-6 animate-fade-in">
           {children}

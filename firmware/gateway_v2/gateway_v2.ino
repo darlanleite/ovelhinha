@@ -102,8 +102,8 @@
 // ============================================================
 // CONSTANTES DE COMPILAÇÃO — iguais em todos os gateways
 // ============================================================
-#define SUPABASE_URL  "https://reefzadzwbmhkojtjqhz.supabase.co"
-#define SUPABASE_KEY  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlZWZ6YWR6d2JtaGtvanRqcWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzUzNDksImV4cCI6MjA5MDgxMTM0OX0.RoAIEJoJT31EdmkjA_3LeyDdiw9f9uK0GuJd2OvfQ_E"
+#define SUPABASE_URL  "https://gxdmwpebrrjmqqkekzwu.supabase.co"
+#define SUPABASE_KEY  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4ZG13cGVicnJqbXFxa2Vrend1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNjExMTQsImV4cCI6MjA5ODkzNzExNH0.1BBgQuE_Bv-UQ491oCj7zwRnj_vXkYnssN-Zyy_7zdw"
 #define CHURCH_ID     "00000000-0000-0000-0000-000000000001"
 
 // ============================================================

@@ -11,7 +11,7 @@ import type { Call } from '@/store/types';
 
 const Dashboard = () => {
   const { churchId } = useAuth();
-  const { children, checkoutChild } = useChildren();
+  const { children, checkoutChild, checkoutOverride } = useChildren();
   const { openCalls, answerCall } = useCalls();
   const { bracelets, stats } = useBracelets();
   const { rooms } = useChurch();
@@ -20,7 +20,19 @@ const Dashboard = () => {
   // responsável devolveu; o servidor confere o par e audita.
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [checkoutBracelet, setCheckoutBracelet] = useState('');
+  // Fluxo de exceção: saída sem a pulseira (perda/terceiro autorizado)
+  const [overrideMode, setOverrideMode] = useState(false);
+  const [overridePickedBy, setOverridePickedBy] = useState('');
+  const [overrideReason, setOverrideReason] = useState('Responsável perdeu a pulseira');
   const checkoutTarget = children.find((c) => c.id === checkoutId);
+
+  const closeCheckout = () => {
+    setCheckoutId(null);
+    setCheckoutBracelet('');
+    setOverrideMode(false);
+    setOverridePickedBy('');
+    setOverrideReason('Responsável perdeu a pulseira');
+  };
 
   const confirmCheckout = async () => {
     if (!checkoutId) return;
@@ -34,8 +46,18 @@ const Dashboard = () => {
       return;
     }
     toast(`Saída de ${checkoutTarget?.name} registrada 🐑`);
-    setCheckoutId(null);
-    setCheckoutBracelet('');
+    closeCheckout();
+  };
+
+  const confirmOverride = async () => {
+    if (!checkoutId || !overridePickedBy.trim()) return;
+    const result = await checkoutOverride(checkoutId, overridePickedBy, overrideReason);
+    if (!result.ok) {
+      toast.error('Erro ao registrar saída');
+      return;
+    }
+    toast(`Saída de ${checkoutTarget?.name} registrada (sem pulseira) 🐑`);
+    closeCheckout();
   };
 
   const presentChildren = children.filter((c) => c.status !== 'left');
@@ -136,27 +158,72 @@ const Dashboard = () => {
 
       {/* Modal de check-out verificado */}
       {checkoutTarget && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={() => setCheckoutId(null)}>
+        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={closeCheckout}>
           <div className="bg-card rounded-card shadow-medium border border-border p-6 w-full max-w-sm animate-fade-in" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-heading font-extrabold text-lg text-foreground">Registrar saída</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
-              Peça a pulseira ao responsável de <strong>{checkoutTarget.name}</strong> e digite o número dela:
-            </p>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={2}
-              value={checkoutBracelet}
-              onChange={(e) => setCheckoutBracelet(e.target.value.replace(/\D/g, ''))}
-              placeholder="Ex: 07"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter' && checkoutBracelet) confirmCheckout(); }}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground font-mono text-2xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            />
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setCheckoutId(null)} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground font-bold text-sm">Cancelar</button>
-              <button onClick={confirmCheckout} disabled={!checkoutBracelet} className="flex-1 py-2.5 rounded-lg bg-success text-success-foreground font-bold text-sm disabled:opacity-40">Confirmar Saída</button>
-            </div>
+
+            {!overrideMode ? (
+              <>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  Peça a pulseira ao responsável de <strong>{checkoutTarget.name}</strong> e digite o número dela:
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={2}
+                  value={checkoutBracelet}
+                  onChange={(e) => setCheckoutBracelet(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Ex: 07"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter' && checkoutBracelet) confirmCheckout(); }}
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground font-mono text-2xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <div className="flex gap-3 mt-4">
+                  <button onClick={closeCheckout} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground font-bold text-sm">Cancelar</button>
+                  <button onClick={confirmCheckout} disabled={!checkoutBracelet} className="flex-1 py-2.5 rounded-lg bg-success text-success-foreground font-bold text-sm disabled:opacity-40">Confirmar Saída</button>
+                </div>
+                <button onClick={() => setOverrideMode(true)} className="w-full mt-3 text-xs text-muted-foreground hover:text-urgent transition-colors underline">
+                  Responsável está sem a pulseira?
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mt-1 mb-3">
+                  Saída <strong>sem pulseira</strong> de <strong>{checkoutTarget.name}</strong> — confira a identidade
+                  e registre quem está retirando. Esta saída fica marcada na auditoria.
+                </p>
+                <div className="bg-muted/30 rounded-lg p-3 mb-3 text-sm space-y-1">
+                  <p className="text-xs uppercase text-muted-foreground font-bold tracking-wide">Pessoas esperadas</p>
+                  {checkoutTarget.guardians.map((g) => (
+                    <p key={g.id} className="text-foreground">👤 {g.name} <span className="text-muted-foreground">· {g.phone}</span></p>
+                  ))}
+                  {checkoutTarget.authorizedPickup && (
+                    <p className="text-foreground">✅ Autorizado: {checkoutTarget.authorizedPickup}</p>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={overridePickedBy}
+                  onChange={(e) => setOverridePickedBy(e.target.value)}
+                  placeholder="Nome de quem está retirando"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <select
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  className="w-full mt-2 px-4 py-3 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option>Responsável perdeu a pulseira</option>
+                  <option>Pessoa autorizada buscando</option>
+                  <option>Outro motivo</option>
+                </select>
+                <div className="flex gap-3 mt-4">
+                  <button onClick={() => setOverrideMode(false)} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground font-bold text-sm">Voltar</button>
+                  <button onClick={confirmOverride} disabled={!overridePickedBy.trim()} className="flex-1 py-2.5 rounded-lg bg-urgent text-urgent-foreground font-bold text-sm disabled:opacity-40">Registrar Saída</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

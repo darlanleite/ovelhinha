@@ -342,18 +342,21 @@ export type Database = {
           id: string
           last_seen: string | null
           name: string
+          offline_alerted_at: string | null
         }
         Insert: {
           church_id: string
           id?: string
           last_seen?: string | null
           name?: string
+          offline_alerted_at?: string | null
         }
         Update: {
           church_id?: string
           id?: string
           last_seen?: string | null
           name?: string
+          offline_alerted_at?: string | null
         }
         Relationships: [
           {
@@ -620,11 +623,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_gateways_offline: { Args: never; Returns: undefined }
       checkout_child: {
         Args: { p_bracelet_number: string; p_child_id: string }
         Returns: Json
       }
+      checkout_override: {
+        Args: { p_child_id: string; p_picked_by: string; p_reason: string }
+        Returns: Json
+      }
       current_church_id: { Args: never; Returns: string }
+      internal_set_secret: {
+        Args: { p_name: string; p_value: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       novo_culto: { Args: never; Returns: Json }

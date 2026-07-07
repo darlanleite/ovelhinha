@@ -23,6 +23,8 @@ export const AUDIT_LABELS: Record<string, { icon: string; label: string }> = {
   novo_culto: { icon: '🗂️', label: 'Novo culto iniciado' },
   consent_given: { icon: '📝', label: 'Consentimento LGPD registrado' },
   child_deleted: { icon: '🗑️', label: 'Cadastro removido' },
+  check_out_override: { icon: '⚠️', label: 'Saída SEM pulseira (exceção)' },
+  gateway_offline: { icon: '📡', label: 'Gateway ficou offline' },
 }
 
 export function useAuditEvents(limit = 100) {

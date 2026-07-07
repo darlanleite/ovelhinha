@@ -8,6 +8,7 @@ import { Search, Camera, Users, Bell, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { acionarPulseira } from '@/lib/esp32';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
+import { GatewayAlertBanner } from '@/components/GatewayAlertBanner';
 import type { Child } from '@/store/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -278,6 +279,8 @@ const TiaDaSala = () => {
         </button>
         <span className="text-primary-foreground/80 text-sm shrink-0">{room?.emoji} {room?.name}</span>
       </header>
+
+      <GatewayAlertBanner />
 
       {/* Painel de presença */}
       <div className="px-4 pt-4 pb-2 grid grid-cols-3 gap-2">

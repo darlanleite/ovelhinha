@@ -200,39 +200,52 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ── Autenticação: exige usuário logado (staff ou tia), não basta a anon key ──
+    // ── Autenticação: usuário logado (staff/tia) ou chamada interna
+    //    do banco (pg_cron) autenticada com a service key ──
     const authHeader = req.headers.get('Authorization') || '';
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await supabaseAuth.auth.getUser();
-    const user = userData?.user;
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401,
-      });
-    }
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, '');
+    const isSystemCall = bearerToken === supabaseServiceKey;
 
-    // ── Igreja derivada da identidade do chamador (não confia no body) ──
     let church_id: string | null = null;
-    const { data: profile } = await supabaseAdmin
-      .from('profiles').select('church_id').eq('user_id', user.id).maybeSingle();
-    if (profile) {
-      church_id = profile.church_id;
-    } else {
-      const { data: tia } = await supabaseAdmin
-        .from('tia_sessions').select('church_id, expires_at').eq('user_id', user.id).maybeSingle();
-      if (tia && new Date(tia.expires_at).getTime() > Date.now()) {
-        church_id = tia.church_id;
+
+    if (!isSystemCall) {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await supabaseAuth.auth.getUser();
+      const user = userData?.user;
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401,
+        });
+      }
+
+      // Igreja derivada da identidade do chamador (não confia no body)
+      const { data: profile } = await supabaseAdmin
+        .from('profiles').select('church_id').eq('user_id', user.id).maybeSingle();
+      if (profile) {
+        church_id = profile.church_id;
+      } else {
+        const { data: tia } = await supabaseAdmin
+          .from('tia_sessions').select('church_id, expires_at').eq('user_id', user.id).maybeSingle();
+        if (tia && new Date(tia.expires_at).getTime() > Date.now()) {
+          church_id = tia.church_id;
+        }
+      }
+      if (!church_id) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+        });
       }
     }
+
+    const { type, child_name, bracelet_number, reason, room_id, gateway_name, church_id: bodyChurch } = await req.json();
+    if (isSystemCall) church_id = bodyChurch ?? null;
     if (!church_id) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+      return new Response(JSON.stringify({ error: 'Missing church_id' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
       });
     }
-
-    const { type, child_name, bracelet_number, reason, room_id } = await req.json();
 
     if (!type) {
       return new Response(JSON.stringify({ error: 'Missing type' }), {
@@ -245,7 +258,17 @@ serve(async (req) => {
     let title: string;
     let body: string;
 
-    if (type === 'call_created') {
+    if (type === 'gateway_offline') {
+      // Só o vigia do banco (pg_cron) pode disparar este tipo
+      if (!isSystemCall) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+        });
+      }
+      targetRole = 'reception';
+      title = `⚠️ Gateway offline`;
+      body = `${gateway_name ?? 'Gateway'} parou de responder — as pulseiras podem não receber comandos`;
+    } else if (type === 'call_created') {
       targetRole = 'reception';
       title = `🐑 Pulseira #${bracelet_number} acionada`;
       body = reason ? `${child_name} · ${reason}` : child_name;
@@ -283,7 +306,7 @@ serve(async (req) => {
       title,
       body,
       tag: `call-${type}`,
-      url: type === 'call_created' ? '/acionar' : '/tia',
+      url: type === 'gateway_offline' ? '/configuracoes' : type === 'call_created' ? '/acionar' : '/tia',
     });
 
     let sent = 0;

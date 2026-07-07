@@ -169,5 +169,26 @@ export function useChildren() {
     return result
   }
 
-  return { children, loading, addChild, updateChild, checkInChild, checkoutChild }
+  /**
+   * Saída SEM a pulseira (perda ou terceiro autorizado buscando).
+   * Só staff; sempre auditada com quem retirou e o motivo.
+   */
+  async function checkoutOverride(id: string, pickedBy: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+    const { data, error } = await supabase.rpc('checkout_override', {
+      p_child_id: id,
+      p_picked_by: pickedBy,
+      p_reason: reason,
+    })
+    if (error) return { ok: false, error: 'RPC_ERROR' }
+    const result = data as unknown as { ok: boolean; error?: string }
+    if (result.ok) {
+      queryClient.setQueryData(['children', churchId], (old: Child[] = []) =>
+        old.map((c) => (c.id === id ? { ...c, status: 'left' as const, braceletNumber: null } : c))
+      )
+      queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] })
+    }
+    return result
+  }
+
+  return { children, loading, addChild, updateChild, checkInChild, checkoutChild, checkoutOverride }
 }

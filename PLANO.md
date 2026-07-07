@@ -27,15 +27,15 @@
 
 ### P0 — LGPD (dados de crianças)
 
-- [ ] **[C]** Consentimento dos pais no fluxo de cadastro (checkbox + texto + registro com timestamp)
-- [ ] **[C]** Política de retenção — anonimizar/apagar notas médicas e telefones após X dias (job ou trigger)
+- [x] **[C]** ~~Consentimento dos pais no fluxo de cadastro~~ ✅ 2026-07-07: checkbox obrigatório (novo e recorrente antigo), timestamp + nome do responsável, evento de auditoria
+- [x] **[C]** ~~Política de retenção~~ ✅ pg_cron mensal: notas médicas anonimizadas 90 dias após saída; cadastro inativo apagado após 365 dias; limpeza de sessões/comandos/auditoria antiga
 - [ ] **[C]** Rascunho de Política de Privacidade e Termos de Uso (para o advogado revisar)
 - [ ] **[D]** Revisão jurídica dos termos (advogado — ver seção Negócio)
 
 ### P1 — Funcionalidades que fecham a promessa do produto
 
-- [ ] **[C]** Check-out verificado por pulseira — criança só sai com o par pulseira↔responsável correto (itens 3.4 + 5.1 do roadmap)
-- [ ] **[C]** Log de auditoria imutável — check-in, chamada, resposta, check-out, quem fez, quando (item 5.4)
+- [x] **[C]** ~~Check-out verificado por pulseira~~ ✅ 2026-07-07: RPC `checkout_child` confere o par no servidor (tia e recepção), tentativa errada vira evento de segurança, e a tela não mostra mais o número esperado (vazava a resposta)
+- [x] **[C]** ~~Log de auditoria imutável~~ ✅ `audit_events` via triggers no banco (não burlável pelo app), sem PII, visível em Relatórios
 - [ ] **[C]** Autorização de terceiros para retirada (item 5.2)
 - [ ] **[C]** Alerta proativo de gateway offline (heartbeat já existe — falta o alarme na UI + push)
 

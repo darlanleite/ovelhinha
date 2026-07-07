@@ -23,7 +23,7 @@ const reasons = [
 const TiaDaSala = () => {
   const { tiaRoom, churchId } = useAuth();
   const navigate = useNavigate();
-  const { children, updateChild } = useChildren();
+  const { children, updateChild, checkoutChild: doCheckout } = useChildren();
   const { calls, addCall } = useCalls();
   const { rooms } = useChurch();
 
@@ -88,20 +88,22 @@ const TiaDaSala = () => {
   const handleCheckoutConfirm = async () => {
     const child = children.find((c) => c.id === checkoutChild);
     if (!child) return;
-    if ((child.braceletNumber || '').trim() !== checkoutBracelet.trim()) {
-      toast.error(`Pulseira incorreta! Esperado: #${child.braceletNumber}`);
+    // Verificação no servidor: confere o par, libera a pulseira e audita.
+    // Nunca revelar o número correto — a tia digita o que vê na pulseira física.
+    const result = await doCheckout(child.id, checkoutBracelet);
+    if (!result.ok) {
+      if (result.error === 'BRACELET_MISMATCH') {
+        toast.error('Pulseira não confere. Confirme com o responsável.');
+      } else {
+        toast.error('Erro ao registrar saída');
+      }
       return;
     }
-    try {
-      await updateChild(child.id, { status: 'left' });
-      toast.success(`${child.name} liberado(a) ✅`);
-      setCheckoutChild(null);
-      setCheckoutBracelet('');
-      setCheckoutQuery('');
-      setCheckoutMode(false);
-    } catch {
-      toast.error('Erro ao registrar saída');
-    }
+    toast.success(`${child.name} liberado(a) ✅`);
+    setCheckoutChild(null);
+    setCheckoutBracelet('');
+    setCheckoutQuery('');
+    setCheckoutMode(false);
   };
 
   const handleEmergency = async () => {
@@ -191,10 +193,10 @@ const TiaDaSala = () => {
               {child?.name.charAt(0)}
             </div>
             <h2 className="font-heading font-black text-xl text-foreground">{child?.name}</h2>
-            <p className="text-sm text-muted-foreground mt-1">Pulseira esperada: <span className="font-mono font-bold text-foreground">#{child?.braceletNumber || '??'}</span></p>
+            <p className="text-sm text-muted-foreground mt-1">Peça a pulseira ao responsável e digite o número dela</p>
           </div>
           <div className="w-full">
-            <p className="text-sm font-medium text-foreground mb-2">Digite o número da pulseira do pai:</p>
+            <p className="text-sm font-medium text-foreground mb-2">Número da pulseira do responsável:</p>
             <input
               type="number"
               value={checkoutBracelet}

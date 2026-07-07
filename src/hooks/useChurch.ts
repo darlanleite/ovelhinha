@@ -121,31 +121,16 @@ export function useChurch() {
 
   async function novoCulto() {
     if (!churchId) throw new Error('Sessão expirada')
-    // Para termos Cadastro Recorrente, não podemos deletar as crianças,
-    // então faremos os updates diretamente ao invés de usar a antiga RPC close_service que excluía os dados.
-    const [childrenRes, callsRes] = await Promise.all([
-      supabase.from('children').select('id', { count: 'exact' }).eq('church_id', churchId).neq('status', 'left'),
-      supabase.from('calls').select('id', { count: 'exact' }).eq('church_id', churchId)
-    ])
-
-    await supabase.from('service_history').insert({
-      church_id: churchId,
-      service_date: new Date().toISOString().split('T')[0],
-      service_name: 'Culto',
-      children_count: childrenRes.count || 0,
-      calls_count: callsRes.count || 0,
-    })
-
-    // Apaga as chamadas pendentes/antigas para limpar os relatórios do dia
-    await supabase.from('calls').delete().eq('church_id', churchId)
-
-    // Libera todas as pulseiras e reseta o status das crianças (mas MANTÉM OS CADASTROS)
-    await supabase.from('bracelets').update({ status: 'available', guardian_name: null, child_id: null }).eq('church_id', churchId).eq('status', 'in-use')
-    await supabase.from('children').update({ status: 'left', bracelet_number: null }).eq('church_id', churchId).neq('status', 'left')
+    // RPC atômica: salva histórico, limpa chamadas, libera pulseiras e
+    // marca crianças como 'left' (cadastros preservados p/ check-in
+    // recorrente) numa única transação, com evento de auditoria.
+    const { error } = await supabase.rpc('novo_culto')
+    if (error) throw error
 
     queryClient.invalidateQueries({ queryKey: ['children', churchId] })
     queryClient.invalidateQueries({ queryKey: ['calls', churchId] })
     queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] })
+    queryClient.invalidateQueries({ queryKey: ['service_history', churchId] })
   }
 
   return {

@@ -3,6 +3,7 @@ import { useCalls } from '@/hooks/useCalls';
 import { useChildren } from '@/hooks/useChildren';
 import { useBracelets } from '@/hooks/useBracelets';
 import { useGatewayCommands } from '@/hooks/useGatewayCommands';
+import { useAuditEvents, AUDIT_LABELS } from '@/hooks/useAuditEvents';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Download, Users, Bell, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ const Relatorios = () => {
   const { children } = useChildren();
   const { bracelets } = useBracelets();
   const { commands } = useGatewayCommands();
+  const { events } = useAuditEvents();
 
   // Mapa número da pulseira → UUID
   const braceletUUIDMap = Object.fromEntries(bracelets.map((b) => [b.number, b.id]));
@@ -144,6 +146,47 @@ const Relatorios = () => {
                   </tr>
                 );
               })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Registro de auditoria — populado por triggers no banco, imutável */}
+      <div className="bg-card rounded-card shadow-soft border border-border overflow-hidden">
+        <div className="p-5 pb-0">
+          <h3 className="font-heading font-bold text-foreground">🔒 Registro de eventos (auditoria)</h3>
+          <p className="text-xs text-muted-foreground mt-1">Todos os check-ins, chamadas e saídas, com quem fez. Gerado automaticamente pelo banco — não pode ser editado.</p>
+        </div>
+        <div className="overflow-x-auto mt-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-5 py-3 text-xs uppercase text-muted-foreground font-heading font-bold tracking-wider">Evento</th>
+                <th className="text-left px-5 py-3 text-xs uppercase text-muted-foreground font-heading font-bold tracking-wider">Criança</th>
+                <th className="text-left px-5 py-3 text-xs uppercase text-muted-foreground font-heading font-bold tracking-wider">Pulseira</th>
+                <th className="text-left px-5 py-3 text-xs uppercase text-muted-foreground font-heading font-bold tracking-wider">Por</th>
+                <th className="text-left px-5 py-3 text-xs uppercase text-muted-foreground font-heading font-bold tracking-wider">Quando</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((ev, i) => {
+                const meta = AUDIT_LABELS[ev.eventType] ?? { icon: '•', label: ev.eventType };
+                const child = ev.childId ? children.find((c) => c.id === ev.childId) : null;
+                const bracelet = (ev.details.bracelet ?? ev.details.bracelet_typed) as string | undefined;
+                const denied = ev.eventType === 'check_out_denied';
+                return (
+                  <tr key={ev.id} className={`border-b border-border last:border-0 ${denied ? 'bg-urgent/5' : i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                    <td className={`px-5 py-3 font-medium ${denied ? 'text-urgent' : 'text-foreground'}`}>{meta.icon} {meta.label}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{child?.name ?? (ev.childId ? '(removida)' : '—')}</td>
+                    <td className="px-5 py-3 font-mono text-foreground">{bracelet ? `#${bracelet}` : '—'}</td>
+                    <td className="px-5 py-3 text-muted-foreground capitalize">{ev.actorRole === 'reception' ? 'recepção' : ev.actorRole}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{new Date(ev.createdAt).toLocaleString('pt-BR')}</td>
+                  </tr>
+                );
+              })}
+              {events.length === 0 && (
+                <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground text-sm">Nenhum evento registrado ainda</td></tr>
+              )}
             </tbody>
           </table>
         </div>

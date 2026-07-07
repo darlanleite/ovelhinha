@@ -11,24 +11,31 @@ import type { Call } from '@/store/types';
 
 const Dashboard = () => {
   const { churchId } = useAuth();
-  const { children, updateChild } = useChildren();
+  const { children, checkoutChild } = useChildren();
   const { openCalls, answerCall } = useCalls();
-  const { bracelets, stats, updateBracelet } = useBracelets();
+  const { bracelets, stats } = useBracelets();
   const { rooms } = useChurch();
 
-  const checkout = async (childId: string) => {
-    const child = children.find((c) => c.id === childId);
-    if (!child) return;
-    try {
-      await updateChild(childId, { status: 'left', braceletNumber: null });
-      if (child.braceletNumber) {
-        const bracelet = bracelets.find((b) => b.number === child.braceletNumber);
-        if (bracelet) await updateBracelet(bracelet.id, { status: 'available', guardianName: null, childId: null });
+  // Check-out verificado: modal pede o número da pulseira que o
+  // responsável devolveu; o servidor confere o par e audita.
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+  const [checkoutBracelet, setCheckoutBracelet] = useState('');
+  const checkoutTarget = children.find((c) => c.id === checkoutId);
+
+  const confirmCheckout = async () => {
+    if (!checkoutId) return;
+    const result = await checkoutChild(checkoutId, checkoutBracelet);
+    if (!result.ok) {
+      if (result.error === 'BRACELET_MISMATCH') {
+        toast.error('Pulseira não confere. Verifique com o responsável.');
+      } else {
+        toast.error('Erro ao registrar saída');
       }
-      toast(`Saída de ${child.name} registrada 🐑`);
-    } catch {
-      toast.error('Erro ao registrar saída');
+      return;
     }
+    toast(`Saída de ${checkoutTarget?.name} registrada 🐑`);
+    setCheckoutId(null);
+    setCheckoutBracelet('');
   };
 
   const presentChildren = children.filter((c) => c.status !== 'left');
@@ -115,7 +122,7 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => checkout(child.id)} className="text-muted-foreground hover:text-urgent transition-colors" title="Dar saída">
+                      <button onClick={() => { setCheckoutId(child.id); setCheckoutBracelet(''); }} className="text-muted-foreground hover:text-urgent transition-colors" title="Dar saída">
                         <LogOut className="w-4 h-4" />
                       </button>
                     </td>
@@ -126,6 +133,33 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de check-out verificado */}
+      {checkoutTarget && (
+        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={() => setCheckoutId(null)}>
+          <div className="bg-card rounded-card shadow-medium border border-border p-6 w-full max-w-sm animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-heading font-extrabold text-lg text-foreground">Registrar saída</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              Peça a pulseira ao responsável de <strong>{checkoutTarget.name}</strong> e digite o número dela:
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              value={checkoutBracelet}
+              onChange={(e) => setCheckoutBracelet(e.target.value.replace(/\D/g, ''))}
+              placeholder="Ex: 07"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter' && checkoutBracelet) confirmCheckout(); }}
+              className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground font-mono text-2xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setCheckoutId(null)} className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground font-bold text-sm">Cancelar</button>
+              <button onClick={confirmCheckout} disabled={!checkoutBracelet} className="flex-1 py-2.5 rounded-lg bg-success text-success-foreground font-bold text-sm disabled:opacity-40">Confirmar Saída</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

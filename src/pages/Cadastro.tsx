@@ -35,7 +35,12 @@ const Cadastro = () => {
   const [showGuardian2, setShowGuardian2] = useState(false);
   const [braceletNumber, setBraceletNumber] = useState('');
   const [authorizedPickup, setAuthorizedPickup] = useState('');
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Consentimento LGPD: sempre no cadastro novo; no recorrente, só se
+  // o cadastro for anterior à coleta de consentimento
+  const needsConsent = mode === 'new' || (!!selectedChild && !selectedChild.consentAt);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -49,6 +54,7 @@ const Cadastro = () => {
     } else if (step === 1) {
       if (!guardianName.trim()) e.guardianName = 'Nome obrigatório';
       if (!guardianPhone.trim()) e.guardianPhone = 'Telefone obrigatório';
+      if (needsConsent && !consent) e.consent = 'A autorização do responsável é obrigatória';
     } else if (step === 2) {
       if (!braceletNumber.trim()) e.braceletNumber = 'Número obrigatório';
       else {
@@ -78,7 +84,12 @@ const Cadastro = () => {
         );
         setCreatedChildId(newId);
       } else {
-        await checkInChild(selectedChild.id, padded, roomId || rooms[0]?.id);
+        await checkInChild(
+          selectedChild.id,
+          padded,
+          roomId || rooms[0]?.id,
+          needsConsent && consent ? guardianName : undefined
+        );
         setCreatedChildId(selectedChild.id);
       }
       toast('Cadastro salvo! ✓ 🐑');
@@ -118,9 +129,9 @@ const Cadastro = () => {
           <button onClick={() => window.print()} className="bg-primary text-primary-foreground font-heading font-bold px-6 py-3 rounded-lg hover:bg-primary-hover transition-colors">
             🖨️ Imprimir Etiqueta
           </button>
-          <button onClick={() => { 
-            setDone(false); setStep(0); setChildName(''); setBraceletNumber(''); setGuardianName(''); setGuardianPhone(''); 
-            setSelectedChild(null); setSearchQuery(''); setMode('new'); setCreatedChildId('');
+          <button onClick={() => {
+            setDone(false); setStep(0); setChildName(''); setBraceletNumber(''); setGuardianName(''); setGuardianPhone('');
+            setSelectedChild(null); setSearchQuery(''); setMode('new'); setCreatedChildId(''); setConsent(false);
           }} className="bg-muted text-foreground font-heading font-bold px-6 py-3 rounded-lg hover:bg-muted/80 transition-colors">
             📋 Novo Cadastro
           </button>
@@ -260,6 +271,25 @@ const Cadastro = () => {
             )}
             <hr className="border-border" />
             <Field label="Pessoa autorizada a buscar (opcional)" value={authorizedPickup} onChange={setAuthorizedPickup} placeholder="Ex: Avó - Dona Maria" />
+            {needsConsent && (
+              <div className={`rounded-lg border p-4 ${errors.consent ? 'border-urgent bg-urgent/5' : 'border-border bg-muted/20'}`}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-0.5 w-5 h-5 accent-primary shrink-0"
+                  />
+                  <span className="text-sm text-foreground">
+                    O responsável <strong>autoriza o uso dos dados da criança</strong> (nome,
+                    nascimento e observações de saúde) exclusivamente para o cuidado dela
+                    durante o culto, conforme a LGPD. Os dados de saúde são apagados
+                    automaticamente após 90 dias sem check-in.
+                  </span>
+                </label>
+                {errors.consent && <p className="text-urgent text-sm mt-2">{errors.consent}</p>}
+              </div>
+            )}
           </div>
         )}
         {step === 2 && (

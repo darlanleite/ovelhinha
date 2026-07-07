@@ -9,6 +9,8 @@ export interface Child {
   authorizedPickup: string | null;
   status: 'present' | 'called' | 'left';
   checkedInAt: string;
+  /** timestamp do consentimento LGPD do responsável (null = nunca consentiu) */
+  consentAt: string | null;
 }
 
 export interface Guardian {

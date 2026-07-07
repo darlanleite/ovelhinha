@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Monitor, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,10 +12,22 @@ const Login = () => {
   const location = useLocation();
   const from = (location.state as { from?: string })?.from;
   const isMobile = useIsMobile();
-  const { signInReception, signInTia, setTiaRoom } = useAuth();
+  const { signInReception, signInTia, setTiaRoom, isStaff, role: authRole, tiaRoom } = useAuth();
 
   const receptionRoutes = ['/dashboard', '/cadastro', '/acionar', '/pulseiras', '/relatorios', '/configuracoes', '/gestor'];
   const comingFromReception = from ? receptionRoutes.some((r) => from.startsWith(r)) : false;
+
+  // Redireciona quando a identidade estiver pronta — cobre a corrida entre
+  // o navigate do submit e a propagação do AuthContext, e também quem
+  // abre "/" já logado
+  useEffect(() => {
+    if (isStaff) {
+      navigate(comingFromReception && from ? from : '/dashboard', { replace: true });
+    } else if (authRole === 'tia' && tiaRoom) {
+      navigate('/tia', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStaff, authRole, tiaRoom]);
 
   const [role, setRole] = useState<'reception' | 'tia' | null>(null);
   const effectiveRole = isMobile ? (role ?? (comingFromReception ? 'reception' : 'tia')) : role;

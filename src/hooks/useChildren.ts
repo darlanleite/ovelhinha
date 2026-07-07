@@ -14,6 +14,7 @@ type ChildRow = {
   authorized_pickup: string | null
   status: 'present' | 'called' | 'left'
   checked_in_at: string
+  consent_at: string | null
   guardians: { id: string; name: string; phone: string; is_primary: boolean }[]
 }
 
@@ -28,6 +29,7 @@ function mapRow(row: ChildRow): Child {
     authorizedPickup: row.authorized_pickup,
     status: row.status,
     checkedInAt: row.checked_in_at,
+    consentAt: row.consent_at,
     guardians: (row.guardians || []).map((g) => ({ id: g.id, name: g.name, phone: g.phone })),
   }
 }
@@ -64,7 +66,7 @@ export function useChildren() {
   }, [queryClient, churchId])
 
   async function addChild(
-    child: Omit<Child, 'id' | 'guardians' | 'status' | 'checkedInAt'>,
+    child: Omit<Child, 'id' | 'guardians' | 'status' | 'checkedInAt' | 'consentAt'>,
     guardians: Omit<Guardian, 'id'>[]
   ) {
     if (!churchId) throw new Error('Sessão expirada')
@@ -80,6 +82,9 @@ export function useChildren() {
         authorized_pickup: child.authorizedPickup || null,
         status: 'present',
         checked_in_at: new Date().toISOString(),
+        // consentimento LGPD dado pelo 1º responsável no ato do cadastro
+        consent_at: new Date().toISOString(),
+        consent_by_name: guardians[0]?.name || null,
       })
       .select()
       .single()
@@ -119,13 +124,18 @@ export function useChildren() {
     )
   }
 
-  async function checkInChild(id: string, braceletNumber: string, roomId: string) {
+  async function checkInChild(id: string, braceletNumber: string, roomId: string, consentByName?: string) {
     if (!churchId) throw new Error('Sessão expirada')
-    const dbUpdates = {
+    const dbUpdates: Record<string, unknown> = {
       status: 'present' as const,
       checked_in_at: new Date().toISOString(),
       bracelet_number: braceletNumber,
       room_id: roomId
+    }
+    // Cadastros antigos (pré-LGPD) coletam o consentimento no check-in
+    if (consentByName) {
+      dbUpdates.consent_at = new Date().toISOString()
+      dbUpdates.consent_by_name = consentByName
     }
     const { error } = await supabase.from('children').update(dbUpdates).eq('id', id)
     if (error) throw error
@@ -139,5 +149,25 @@ export function useChildren() {
       .eq('number', braceletNumber)
   }
 
-  return { children, loading, addChild, updateChild, checkInChild }
+  /**
+   * Check-out verificado: o servidor confere o par criança↔pulseira,
+   * libera a pulseira e audita (inclusive tentativas negadas).
+   */
+  async function checkoutChild(id: string, braceletNumber: string): Promise<{ ok: boolean; error?: string }> {
+    const { data, error } = await supabase.rpc('checkout_child', {
+      p_child_id: id,
+      p_bracelet_number: braceletNumber,
+    })
+    if (error) return { ok: false, error: 'RPC_ERROR' }
+    const result = data as unknown as { ok: boolean; error?: string }
+    if (result.ok) {
+      queryClient.setQueryData(['children', churchId], (old: Child[] = []) =>
+        old.map((c) => (c.id === id ? { ...c, status: 'left' as const, braceletNumber: null } : c))
+      )
+      queryClient.invalidateQueries({ queryKey: ['bracelets', churchId] })
+    }
+    return result
+  }
+
+  return { children, loading, addChild, updateChild, checkInChild, checkoutChild }
 }

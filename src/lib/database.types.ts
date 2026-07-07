@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string
+          child_id: string | null
+          church_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: number
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string
+          child_id?: string | null
+          church_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: never
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string
+          child_id?: string | null
+          church_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bracelets: {
         Row: {
           battery: number
@@ -135,6 +176,8 @@ export type Database = {
           bracelet_number: string | null
           checked_in_at: string
           church_id: string
+          consent_at: string | null
+          consent_by_name: string | null
           created_at: string
           id: string
           medical_notes: string | null
@@ -148,6 +191,8 @@ export type Database = {
           bracelet_number?: string | null
           checked_in_at?: string
           church_id: string
+          consent_at?: string | null
+          consent_by_name?: string | null
           created_at?: string
           id?: string
           medical_notes?: string | null
@@ -161,6 +206,8 @@ export type Database = {
           bracelet_number?: string | null
           checked_in_at?: string
           church_id?: string
+          consent_at?: string | null
+          consent_by_name?: string | null
           created_at?: string
           id?: string
           medical_notes?: string | null
@@ -562,9 +609,25 @@ export type Database = {
         Args: { p_answered_by: string; p_call_id: string }
         Returns: undefined
       }
+      apply_retention: { Args: never; Returns: Json }
+      audit_actor_role: { Args: never; Returns: string }
+      audit_log: {
+        Args: {
+          p_child: string
+          p_church: string
+          p_details: Json
+          p_type: string
+        }
+        Returns: undefined
+      }
+      checkout_child: {
+        Args: { p_bracelet_number: string; p_child_id: string }
+        Returns: Json
+      }
       current_church_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      novo_culto: { Args: never; Returns: Json }
       tia_claim: { Args: { p_code: string }; Returns: Json }
       tia_set_room: { Args: { p_room_id: string }; Returns: undefined }
     }

@@ -190,7 +190,11 @@ const Dashboard = () => {
               <>
                 <p className="text-sm text-muted-foreground mt-1 mb-3">
                   Saída <strong>sem pulseira</strong> de <strong>{checkoutTarget.name}</strong> — confira a identidade
-                  e registre quem está retirando. Esta saída fica marcada na auditoria.
+                  e registre quem está retirando. Esta saída fica marcada na auditoria
+                  {checkoutTarget.braceletNumber && (
+                    <> e a pulseira <span className="font-mono font-bold">#{checkoutTarget.braceletNumber}</span> será
+                    marcada como <strong>extraviada</strong> até ser devolvida</>
+                  )}.
                 </p>
                 <div className="bg-muted/30 rounded-lg p-3 mb-3 text-sm space-y-1">
                   <p className="text-xs uppercase text-muted-foreground font-bold tracking-wide">Pessoas esperadas</p>

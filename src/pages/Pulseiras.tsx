@@ -11,9 +11,10 @@ const statusConfig = {
   'in-use':    { label: 'Em uso',      dot: 'bg-secondary', bg: 'bg-secondary/10' },
   'charging':  { label: 'Carregando', dot: 'bg-primary', bg: 'bg-primary/10' },
   'offline':   { label: 'Offline',    dot: 'bg-muted-foreground', bg: 'bg-muted' },
+  'missing':   { label: 'Extraviada', dot: 'bg-urgent', bg: 'bg-urgent/10' },
 };
 
-const filters = ['Todas', 'Disponíveis', 'Em uso', 'Bateria baixa'] as const;
+const filters = ['Todas', 'Disponíveis', 'Em uso', 'Extraviadas', 'Bateria baixa'] as const;
 
 const ConnectivityBadge = ({ bracelet }: { bracelet: Bracelet }) => {
   if (bracelet.status !== 'in-use') return null;
@@ -69,9 +70,20 @@ const Pulseiras = () => {
   const filtered = bracelets.filter((b) => {
     if (filter === 'Disponíveis') return b.status === 'available';
     if (filter === 'Em uso') return b.status === 'in-use';
+    if (filter === 'Extraviadas') return b.status === 'missing';
     if (filter === 'Bateria baixa') return b.battery < 20;
     return true;
   });
+
+  // Pulseira extraviada voltou fisicamente: devolve à circulação
+  const handleReturned = async (b: Bracelet) => {
+    try {
+      await updateBracelet(b.id, { status: 'available', guardianName: null });
+      toast(`Pulseira #${b.number} devolvida à circulação! 🐑`);
+    } catch {
+      toast.error('Erro ao atualizar pulseira');
+    }
+  };
 
   const handleAdd = async () => {
     const nextNum = (bracelets.length + 1).toString().padStart(2, '0');
@@ -130,6 +142,14 @@ const Pulseiras = () => {
                   <LogOut className="w-3.5 h-3.5" />
                   Desvincular
                 </button>
+              )}
+              {b.status === 'missing' && (
+                <>
+                  <p className="text-xs text-urgent font-medium mt-2">Saiu com o responsável — cobrar devolução</p>
+                  <button onClick={() => handleReturned(b)} className="mt-2 w-full bg-success/10 text-success hover:bg-success hover:text-success-foreground text-xs font-bold py-2 rounded-lg transition-colors">
+                    ✓ Marcar como devolvida
+                  </button>
+                </>
               )}
             </div>
           );

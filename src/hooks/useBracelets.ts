@@ -8,7 +8,7 @@ export type BraceletRow = {
   id: string
   number: string
   esp_id: string | null
-  status: 'available' | 'in-use' | 'charging' | 'offline'
+  status: 'available' | 'in-use' | 'charging' | 'offline' | 'missing'
   battery: number
   guardian_name: string | null
   child_id: string | null
@@ -73,6 +73,7 @@ export function useBracelets() {
     inUse: bracelets.filter((b) => b.status === 'in-use').length,
     charging: bracelets.filter((b) => b.status === 'charging').length,
     offline: bracelets.filter((b) => b.status === 'offline').length,
+    missing: bracelets.filter((b) => b.status === 'missing').length,
     lowBattery: bracelets.filter((b) => b.battery < 20).length,
   }
 

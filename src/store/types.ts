@@ -23,7 +23,8 @@ export interface Bracelet {
   id: string;
   number: string;
   espId: string | null;
-  status: 'available' | 'in-use' | 'charging' | 'offline';
+  /** missing = saiu com um responsável (override) e ainda não foi devolvida */
+  status: 'available' | 'in-use' | 'charging' | 'offline' | 'missing';
   battery: number;
   guardianName: string | null;
   childId: string | null;

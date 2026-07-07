@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizePhoneBR, waLink, braceletReturnMessage } from '@/lib/whatsapp'
+import { normalizePhoneBR, waLink, braceletReturnMessage, callParentMessage } from '@/lib/whatsapp'
 
 describe('normalizePhoneBR', () => {
   it('celular com DDD (11 dígitos) ganha DDI 55', () => {
@@ -39,6 +39,16 @@ describe('braceletReturnMessage', () => {
     const msg = braceletReturnMessage('Maria da Silva', '07', 'Igreja Batista')
     expect(msg).toContain('Olá, Maria!')
     expect(msg).toContain('#07')
+    expect(msg).toContain('Igreja Batista')
+  })
+})
+
+describe('callParentMessage', () => {
+  it('inclui primeiro nome do pai e da criança, motivo e igreja', () => {
+    const msg = callParentMessage('Carlos Souza', 'Sofia Souza', 'Banheiro', 'Igreja Batista')
+    expect(msg).toContain('Olá, Carlos!')
+    expect(msg).toContain('Sofia precisa de você')
+    expect(msg).toContain('(banheiro)')
     expect(msg).toContain('Igreja Batista')
   })
 })

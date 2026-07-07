@@ -6,8 +6,9 @@ import { useChurch } from '@/hooks/useChurch';
 import { braceletOfflineSince, braceletIsRisky } from '@/store/types';
 import type { Call } from '@/store/types';
 import { toast } from 'sonner';
-import { Search, Camera } from 'lucide-react';
+import { Search, Camera, MessageCircle } from 'lucide-react';
 import { acionarPulseira, encerrarPulseira } from '@/lib/esp32';
+import { waLink, callParentMessage } from '@/lib/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
 
 const reasons = [
@@ -22,7 +23,7 @@ const reasons = [
 const Acionar = () => {
   const { churchId } = useAuth();
   const { children, updateChild } = useChildren();
-  const { rooms } = useChurch();
+  const { rooms, settings } = useChurch();
   const { calls, addCall, answerCall, reactivateCall } = useCalls();
   const { bracelets } = useBracelets();
 
@@ -97,9 +98,16 @@ const Acionar = () => {
     }
   };
 
-  const handleFallback = (channel: 'whatsapp' | 'microphone' | 'volunteer') => {
-    const labels = { whatsapp: 'WhatsApp enviado 🐑', microphone: 'Anúncio registrado 🐑', volunteer: 'Voluntário acionado 🐑' };
+  const handleFallback = (channel: 'microphone' | 'volunteer') => {
+    const labels = { microphone: 'Anúncio registrado 🐑', volunteer: 'Voluntário acionado 🐑' };
     toast(labels[channel]);
+  };
+
+  // Fallback real: wa.me com mensagem pronta para o responsável
+  const waHrefFor = (reason: string): string | null => {
+    const guardian = child?.guardians[0];
+    if (!child || !guardian?.phone) return null;
+    return waLink(guardian.phone, callParentMessage(guardian.name, child.name, reason, settings.churchName));
   };
 
   if (calling) {
@@ -121,7 +129,8 @@ const Acionar = () => {
         childName={child?.name || ''}
         onAnswered={handleAnswered}
         onReactivate={handleReactivate}
-        onFallback={handleFallback}
+        waHref={waHrefFor(activeCall.reason)}
+        reactivateMinutes={settings.reactivateMinutes}
       />
     );
   }
@@ -183,7 +192,12 @@ const Acionar = () => {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <button onClick={() => handleFallback('whatsapp')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors">📱 Enviar WhatsApp</button>
+                {(() => {
+                  const link = waHrefFor(selectedReason !== null ? reasons[selectedReason].label : 'a equipe precisa falar com você');
+                  return link ? (
+                    <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs font-medium px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors">📱 Enviar WhatsApp</a>
+                  ) : null;
+                })()}
                 <button onClick={() => handleFallback('microphone')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">🎙️ Anunciar no microfone</button>
                 <button onClick={() => handleFallback('volunteer')} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-secondary/10 text-foreground border border-secondary/20 hover:bg-secondary/20 transition-colors">🙋 Acionar voluntário</button>
               </div>
@@ -227,8 +241,8 @@ const Acionar = () => {
   );
 };
 
-const WaitingScreen = ({ call, childName, onAnswered, onReactivate, onFallback }: {
-  call: Call; childName: string; onAnswered: () => void; onReactivate: () => void; onFallback: (c: 'whatsapp' | 'microphone' | 'volunteer') => void;
+const WaitingScreen = ({ call, childName, onAnswered, onReactivate, waHref, reactivateMinutes }: {
+  call: Call; childName: string; onAnswered: () => void; onReactivate: () => void; waHref: string | null; reactivateMinutes: number;
 }) => {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -242,6 +256,8 @@ const WaitingScreen = ({ call, childName, onAnswered, onReactivate, onFallback }
   const mins = Math.floor(elapsed / 60);
   const secs = elapsed % 60;
   const progress = Math.min((elapsed / 300) * 100, 100);
+  // Pai não veio no tempo esperado: escala para o WhatsApp
+  const overdue = elapsed >= reactivateMinutes * 60;
 
   return (
     <div className="max-w-lg mx-auto text-center py-16 animate-fade-in">
@@ -256,6 +272,24 @@ const WaitingScreen = ({ call, childName, onAnswered, onReactivate, onFallback }
         <button onClick={onAnswered} className="bg-success text-success-foreground font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">✓ Pai Chegou</button>
         <button onClick={onReactivate} className="bg-secondary text-secondary-foreground font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">🔁 Reacionar</button>
       </div>
+      {waHref && (
+        overdue ? (
+          <div className="mt-8 bg-urgent/5 border border-urgent/30 rounded-card p-4 animate-fade-in">
+            <p className="text-sm font-bold text-urgent mb-3">Pai não chegou? Tente pelo WhatsApp:</p>
+            <a href={waHref} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[#25D366] text-white font-heading font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity">
+              <MessageCircle className="w-5 h-5" />
+              Chamar no WhatsApp
+            </a>
+          </div>
+        ) : (
+          <a href={waHref} target="_blank" rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#128C7E] transition-colors underline">
+            <MessageCircle className="w-4 h-4" />
+            Chamar também no WhatsApp
+          </a>
+        )
+      )}
     </div>
   );
 };

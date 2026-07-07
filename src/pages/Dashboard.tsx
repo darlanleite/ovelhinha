@@ -6,15 +6,22 @@ import { useChurch } from '@/hooks/useChurch';
 import { Users, Watch, AlertTriangle, BatteryLow, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { encerrarPulseira } from '@/lib/esp32';
+import { waLink, callParentMessage } from '@/lib/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Call } from '@/store/types';
+import type { Call, Child } from '@/store/types';
 
 const Dashboard = () => {
   const { churchId } = useAuth();
   const { children, checkoutChild, checkoutOverride } = useChildren();
   const { openCalls, answerCall } = useCalls();
   const { bracelets, stats } = useBracelets();
-  const { rooms } = useChurch();
+  const { rooms, settings } = useChurch();
+
+  const waCallHref = (call: Call, child: Child | undefined): string | null => {
+    const guardian = child?.guardians[0];
+    if (!child || !guardian?.phone) return null;
+    return waLink(guardian.phone, callParentMessage(guardian.name, child.name, call.reason, settings.churchName));
+  };
 
   // Check-out verificado: modal pede o número da pulseira que o
   // responsável devolveu; o servidor confere o par e audita.
@@ -101,6 +108,7 @@ const Dashboard = () => {
                   key={call.id}
                   call={call}
                   childName={child?.name || ''}
+                  waHref={waCallHref(call, child)}
                   onAnswer={async () => {
                     await answerCall(call.id, 'reception');
                     const bracelet = child?.braceletNumber || call.braceletNumber;
@@ -235,7 +243,7 @@ const Dashboard = () => {
   );
 };
 
-const OpenCallCard = ({ call, childName, onAnswer }: { call: Call; childName: string; onAnswer: () => void }) => {
+const OpenCallCard = ({ call, childName, waHref, onAnswer }: { call: Call; childName: string; waHref: string | null; onAnswer: () => void }) => {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const start = new Date(call.createdAt).getTime();
@@ -259,6 +267,12 @@ const OpenCallCard = ({ call, childName, onAnswer }: { call: Call; childName: st
       <div className={`font-mono text-lg font-bold ${overdue ? 'text-urgent' : 'text-foreground'}`}>
         {mins}:{secs.toString().padStart(2, '0')}
       </div>
+      {waHref && (
+        <a href={waHref} target="_blank" rel="noopener noreferrer" title="Chamar no WhatsApp"
+          className={`font-heading font-bold text-sm px-3 py-2.5 rounded-lg transition-opacity hover:opacity-90 ${overdue ? 'bg-[#25D366] text-white animate-pulse-urgent' : 'bg-[#25D366]/10 text-[#128C7E]'}`}>
+          💬 WhatsApp
+        </a>
+      )}
       <button onClick={onAnswer} className="bg-success text-success-foreground font-heading font-bold text-sm px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity">
         ✓ Chegou
       </button>

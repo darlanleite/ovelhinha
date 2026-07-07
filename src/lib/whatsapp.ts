@@ -33,3 +33,14 @@ export function braceletReturnMessage(guardianName: string, braceletNumber: stri
     `Pode devolvê-la na recepção no próximo culto? Obrigado!`
   )
 }
+
+/** Fallback da chamada: pulseira falhou ou o pai não apareceu */
+export function callParentMessage(guardianName: string, childName: string, reason: string, churchName: string): string {
+  const firstName = guardianName.trim().split(/\s+/)[0] || guardianName
+  const childFirst = childName.trim().split(/\s+/)[0] || childName
+  return (
+    `Olá, ${firstName}! 🐑 Aqui é do ministério infantil da ${churchName}. ` +
+    `${childFirst} precisa de você (${reason.toLowerCase()}). ` +
+    `Pode vir até a área kids, por favor?`
+  )
+}

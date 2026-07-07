@@ -9,6 +9,7 @@ import { useBracelets } from '@/hooks/useBracelets';
 import { useChurch } from '@/hooks/useChurch';
 import { useGateway } from '@/hooks/useGateway';
 import { acionarPulseira, encerrarPulseira } from '@/lib/esp32';
+import { waLink, callParentMessage } from '@/lib/whatsapp';
 import OvelhinhaLogo from '@/components/OvelhinhaLogo';
 import type { Call } from '@/store/types';
 
@@ -27,7 +28,7 @@ function CallsTab() {
   const { churchId } = useAuth();
   const { children } = useChildren();
   const { openCalls, answerCall } = useCalls();
-  const { rooms } = useChurch();
+  const { rooms, settings } = useChurch();
   const [answering, setAnswering] = useState<string | null>(null);
 
   const sorted = [...openCalls].sort(
@@ -50,6 +51,12 @@ function CallsTab() {
         <CallCard
           key={call.id}
           call={call}
+          waHref={(() => {
+            const child = children.find((c) => c.id === call.childId);
+            const guardian = child?.guardians[0];
+            if (!child || !guardian?.phone) return null;
+            return waLink(guardian.phone, callParentMessage(guardian.name, child.name, call.reason, settings.churchName));
+          })()}
           childName={children.find((c) => c.id === call.childId)?.name ?? '—'}
           roomLabel={(() => { const r = rooms.find((r) => r.id === call.roomId); return r ? `${r.emoji} ${r.name}` : ''; })()}
           answering={answering === call.id}
@@ -72,8 +79,8 @@ function CallsTab() {
   );
 }
 
-function CallCard({ call, childName, roomLabel, answering, onAnswer }: {
-  call: Call; childName: string; roomLabel: string; answering: boolean; onAnswer: () => void;
+function CallCard({ call, childName, roomLabel, answering, waHref, onAnswer }: {
+  call: Call; childName: string; roomLabel: string; answering: boolean; waHref: string | null; onAnswer: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -102,6 +109,12 @@ function CallCard({ call, childName, roomLabel, answering, onAnswer }: {
             {mins}:{secs.toString().padStart(2, '0')}
           </p>
         </div>
+        {waHref && (
+          <a href={waHref} target="_blank" rel="noopener noreferrer" title="Chamar no WhatsApp"
+            className={`shrink-0 text-sm font-bold px-3 py-2 rounded-lg transition-opacity hover:opacity-90 ${isUrgent ? 'bg-[#25D366] text-white' : 'bg-[#25D366]/10 text-[#128C7E]'}`}>
+            💬
+          </a>
+        )}
         <button
           onClick={onAnswer}
           disabled={answering}

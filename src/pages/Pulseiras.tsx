@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useBracelets } from '@/hooks/useBracelets';
 import { useChildren } from '@/hooks/useChildren';
+import { useChurch } from '@/hooks/useChurch';
+import { waLink, braceletReturnMessage } from '@/lib/whatsapp';
 import { braceletOfflineSince } from '@/store/types';
 import type { Bracelet } from '@/store/types';
 import { toast } from 'sonner';
-import { Plus, Battery, Wifi, WifiOff, LogOut } from 'lucide-react';
+import { Plus, Battery, Wifi, WifiOff, LogOut, MessageCircle } from 'lucide-react';
 
 const statusConfig = {
   'available': { label: 'Disponível', dot: 'bg-success', bg: 'bg-success/10' },
@@ -53,7 +55,8 @@ const ConnectivityBadge = ({ bracelet }: { bracelet: Bracelet }) => {
 
 const Pulseiras = () => {
   const { bracelets, addBracelet, updateBracelet } = useBracelets();
-  const { updateChild } = useChildren();
+  const { children, updateChild } = useChildren();
+  const { settings } = useChurch();
   const [filter, setFilter] = useState<typeof filters[number]>('Todas');
 
   const handleCheckout = async (b: Bracelet) => {
@@ -78,11 +81,20 @@ const Pulseiras = () => {
   // Pulseira extraviada voltou fisicamente: devolve à circulação
   const handleReturned = async (b: Bracelet) => {
     try {
-      await updateBracelet(b.id, { status: 'available', guardianName: null });
+      await updateBracelet(b.id, { status: 'available', guardianName: null, childId: null });
       toast(`Pulseira #${b.number} devolvida à circulação! 🐑`);
     } catch {
       toast.error('Erro ao atualizar pulseira');
     }
+  };
+
+  // Link wa.me para cobrar a devolução (telefone vem do cadastro da criança)
+  const returnChargeLink = (b: Bracelet): string | null => {
+    const child = b.childId ? children.find((c) => c.id === b.childId) : null;
+    const guardian = child?.guardians[0];
+    if (!guardian?.phone) return null;
+    const name = b.guardianName || guardian.name;
+    return waLink(guardian.phone, braceletReturnMessage(name, b.number, settings.churchName));
   };
 
   const handleAdd = async () => {
@@ -146,6 +158,16 @@ const Pulseiras = () => {
               {b.status === 'missing' && (
                 <>
                   <p className="text-xs text-urgent font-medium mt-2">Saiu com o responsável — cobrar devolução</p>
+                  {(() => {
+                    const link = returnChargeLink(b);
+                    return link ? (
+                      <a href={link} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 w-full bg-[#25D366]/10 text-[#128C7E] hover:bg-[#25D366] hover:text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Cobrar no WhatsApp
+                      </a>
+                    ) : null;
+                  })()}
                   <button onClick={() => handleReturned(b)} className="mt-2 w-full bg-success/10 text-success hover:bg-success hover:text-success-foreground text-xs font-bold py-2 rounded-lg transition-colors">
                     ✓ Marcar como devolvida
                   </button>

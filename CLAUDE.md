@@ -6,8 +6,9 @@ Pais deixam seus filhos na área kids e recebem uma pulseira numerada. Quando h�
 a equipe aciona a pulseira do pai pelo sistema, que acende o LED. O pai vai até a recepção.
 
 **Tagline:** "Cada criança, no lugar certo."
-**Site em produção:** https://ovelhinha-olive.vercel.app
+**Site em produção:** https://ovelhinha.vercel.app (projeto Vercel "ovelhinha" no time darlan's projects)
 **Repositório:** https://github.com/darlanleite/ovelhinha
+**Supabase:** projeto `gxdmwpebrrjmqqkekzwu` (org "ovelhinha", conta darlanleite50) — o antigo `reefzadzwbmhkojtjqhz` está pausado/aposentado
 
 ---
 

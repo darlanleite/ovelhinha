@@ -4,7 +4,7 @@ import webpush from "npm:web-push@3.6.7";
 
 // Origens permitidas: configure ALLOWED_ORIGINS (separadas por vírgula) nos
 // secrets da função. Localhost é liberado para desenvolvimento.
-const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'https://ovelhinha-olive.vercel.app')
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'https://ovelhinha.vercel.app')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
